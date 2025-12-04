@@ -11,4 +11,4 @@ npm run export-pages
 
 next edits: 
 
-add a save game button
+Artifact rewards are way to easy to get they need to feel earned.

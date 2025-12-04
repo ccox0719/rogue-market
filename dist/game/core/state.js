@@ -1,15 +1,13 @@
 import { createSeededRng } from "./rng.js";
 import { CONFIG, getDifficultyMode } from "./config.js";
-import { computeArtifactEffects } from "./artifactEffects.js";
-import { generateArtifactPool } from "../generators/artifactGen.js";
+import { aggregateArtifactEffects } from "./artifactEffects.js";
 import { generateCompany } from "../generators/companyGen.js";
-import { generateEras } from "../generators/eraGen.js";
+import { generateEraDeck } from "../generators/eraGen.js";
 import { generateSectors } from "../generators/sectorGen.js";
 export const createInitialState = (seed, providedRng, options = {}) => {
     const runSeed = seed ?? Date.now();
     const rng = providedRng ?? createSeededRng(runSeed);
     const difficulty = options.difficulty ?? getDifficultyMode();
-    const artifactEffects = options.artifactEffects ?? computeArtifactEffects(generateArtifactPool());
     const sectors = generateSectors();
     const targetCompanyCount = Math.max(CONFIG.COMPANY_COUNT, sectors.length);
     const coreCompanies = sectors.map((sector) => generateCompany(rng, sectors, sector));
@@ -17,15 +15,16 @@ export const createInitialState = (seed, providedRng, options = {}) => {
     const additionalCompanies = Array.from({ length: remainingCompaniesCount }, () => generateCompany(rng, sectors));
     const companies = [...coreCompanies, ...additionalCompanies];
     const baseCash = CONFIG.START_CASH * difficulty.modifiers.startingCashMultiplier;
-    const startingCash = Number((baseCash * (1 + artifactEffects.startingCashBonus)).toFixed(2));
+    const startingCash = Number(baseCash.toFixed(2));
     const baseEventChance = CONFIG.DAILY_EVENT_CHANCE * difficulty.modifiers.eventMultiplier;
-    const eventChance = Math.min(1, baseEventChance * (1 + artifactEffects.eventChanceBonus));
+    const eventChance = baseEventChance;
     const volatilityMultiplier = difficulty.modifiers.volatilityMultiplier;
     const totalDays = difficulty.special?.noRunOver ? Number.MAX_SAFE_INTEGER : CONFIG.DAYS_PER_RUN;
-    const eras = generateEras(rng).map((era) => ({
-        ...era,
-        duration: Math.max(2, era.duration - artifactEffects.eraDurationReduction),
-    }));
+    const eras = generateEraDeck(rng, { cycle: 0 });
+    const artifactEffects = aggregateArtifactEffects([]);
+    const baseMarginLimit = startingCash * 0.25;
+    const baseWatchOrderLimit = CONFIG.BASE_WATCH_ORDER_LIMIT;
+    const startingPortfolioValue = startingCash;
     return {
         day: 1,
         totalDays,
@@ -43,7 +42,6 @@ export const createInitialState = (seed, providedRng, options = {}) => {
         discoveredTools: [],
         eventsToday: [],
         runOver: false,
-        artifacts: generateArtifactPool(),
         seed: runSeed,
         eventChance,
         volatilityMultiplier,
@@ -52,5 +50,41 @@ export const createInitialState = (seed, providedRng, options = {}) => {
         artifactEffects,
         pendingChoice: null,
         watchOrders: [],
+        runStats: {
+            peakPortfolioValue: startingPortfolioValue,
+            bestSingleDayGain: 0,
+            previousPortfolioValue: startingPortfolioValue,
+        },
+        activeArtifacts: [],
+        pendingArtifactReward: null,
+        artifactRewardHistory: [],
+        watchOrderLimit: baseWatchOrderLimit,
+        baseStartingCash: startingCash,
+        baseEventChance,
+        baseVolatilityMultiplier: volatilityMultiplier,
+        baseMarginLimit,
+        baseWatchOrderLimit,
+        predictedNextEraId: eras[1]?.id ?? null,
+        actualNextEraId: eras[1]?.id ?? null,
+        predictionConfidence: 0,
+        predictionWasAccurate: true,
+        currentEraMutated: false,
+        mutationMessage: "",
+        eraDeckCycle: 0,
+        activeWhales: [],
+        whaleSectorBonuses: {},
+        whaleCompanyBonuses: {},
+        whaleActionLog: [],
+        devActionLog: [],
+        bondHoldings: [],
+        bondMarket: [],
+        bondActionLog: [],
+        lifecycleLog: [],
+        campaignId: null,
+        campaignObjective: null,
+        campaignRunIndex: 1,
+        challengeId: null,
+        pendingCarryChoices: null,
+        carryHistory: [],
     };
 };

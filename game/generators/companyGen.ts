@@ -18,6 +18,11 @@ export interface Company {
   eventAffinity: Record<string, number>;
   correlations: string[];
   todayRange: IntradayRange;
+  isActive: boolean;
+  splitReferencePrice: number;
+  splitCount: number;
+  daysBelowBankruptcyThreshold: number;
+  daysSinceListing: number;
 }
 
 const randRange = (rng: RNG, min: number, max: number): number =>
@@ -70,5 +75,10 @@ export const generateCompany = (
     eventAffinity: buildAffinities(rng, sectors),
     correlations: pickCorrelations(rng, sectors, primarySector.name),
     todayRange: buildInitialRange(price),
+    isActive: true,
+    splitReferencePrice: price,
+    splitCount: 0,
+    daysBelowBankruptcyThreshold: 0,
+    daysSinceListing: 0,
   };
 };

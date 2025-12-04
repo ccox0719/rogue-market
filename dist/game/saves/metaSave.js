@@ -10,7 +10,20 @@ export const loadMeta = () => {
         return defaultMetaState;
     }
     try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return {
+            ...defaultMetaState,
+            ...parsed,
+            artifacts: parsed.artifacts ?? defaultMetaState.artifacts,
+            sectorsUnlocked: parsed.sectorsUnlocked ?? defaultMetaState.sectorsUnlocked,
+            unlockedArtifacts: parsed.unlockedArtifacts ?? defaultMetaState.unlockedArtifacts,
+            legacyBuffs: parsed.legacyBuffs ?? defaultMetaState.legacyBuffs,
+            unlockedCampaigns: parsed.unlockedCampaigns ?? defaultMetaState.unlockedCampaigns,
+            campaignProgress: parsed.campaignProgress ?? defaultMetaState.campaignProgress,
+            activeCampaignId: parsed.activeCampaignId ?? defaultMetaState.activeCampaignId,
+            activeChallengeId: parsed.activeChallengeId ?? defaultMetaState.activeChallengeId,
+            challengeRecords: parsed.challengeRecords ?? defaultMetaState.challengeRecords,
+        };
     }
     catch {
         saveMeta(defaultMetaState);

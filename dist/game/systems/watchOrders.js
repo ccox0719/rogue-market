@@ -16,6 +16,7 @@ const getStopLossFillPrice = (range, triggerPrice) => {
     }
     return Math.min(triggerPrice, range.open);
 };
+const hasWatchCapacity = (state) => state.watchOrders.length < state.watchOrderLimit;
 export const placeLimitBuyWatch = (state, companyId, triggerPrice, maxCashToSpend, timeInForce = "good-till-run") => {
     const order = {
         id: crypto.randomUUID(),
@@ -26,6 +27,9 @@ export const placeLimitBuyWatch = (state, companyId, triggerPrice, maxCashToSpen
         timeInForce,
         createdDay: state.day,
     };
+    if (!hasWatchCapacity(state)) {
+        return null;
+    }
     state.watchOrders.push(order);
     return order;
 };
@@ -39,6 +43,9 @@ export const placeLimitSellWatch = (state, companyId, triggerPrice, sharesToSell
         timeInForce,
         createdDay: state.day,
     };
+    if (!hasWatchCapacity(state)) {
+        return null;
+    }
     state.watchOrders.push(order);
     return order;
 };
@@ -52,6 +59,9 @@ export const placeStopLossWatch = (state, companyId, triggerPrice, sharesToSell,
         timeInForce,
         createdDay: state.day,
     };
+    if (!hasWatchCapacity(state)) {
+        return null;
+    }
     state.watchOrders.push(order);
     return order;
 };

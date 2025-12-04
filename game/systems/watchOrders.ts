@@ -29,13 +29,16 @@ const getStopLossFillPrice = (range: IntradayRange, triggerPrice: number): numbe
   return Math.min(triggerPrice, range.open);
 };
 
+const hasWatchCapacity = (state: GameState): boolean =>
+  state.watchOrders.length < state.watchOrderLimit;
+
 export const placeLimitBuyWatch = (
   state: GameState,
   companyId: string,
   triggerPrice: number,
   maxCashToSpend: number,
   timeInForce: WatchOrderTimeInForce = "good-till-run"
-): WatchOrder => {
+): WatchOrder | null => {
   const order: WatchOrder = {
     id: crypto.randomUUID(),
     companyId,
@@ -45,6 +48,10 @@ export const placeLimitBuyWatch = (
     timeInForce,
     createdDay: state.day,
   };
+
+  if (!hasWatchCapacity(state)) {
+    return null;
+  }
 
   state.watchOrders.push(order);
   return order;
@@ -56,7 +63,7 @@ export const placeLimitSellWatch = (
   triggerPrice: number,
   sharesToSell: number,
   timeInForce: WatchOrderTimeInForce = "good-till-run"
-): WatchOrder => {
+): WatchOrder | null => {
   const order: WatchOrder = {
     id: crypto.randomUUID(),
     companyId,
@@ -66,6 +73,10 @@ export const placeLimitSellWatch = (
     timeInForce,
     createdDay: state.day,
   };
+
+  if (!hasWatchCapacity(state)) {
+    return null;
+  }
 
   state.watchOrders.push(order);
   return order;
@@ -77,7 +88,7 @@ export const placeStopLossWatch = (
   triggerPrice: number,
   sharesToSell: number,
   timeInForce: WatchOrderTimeInForce = "good-till-run"
-): WatchOrder => {
+): WatchOrder | null => {
   const order: WatchOrder = {
     id: crypto.randomUUID(),
     companyId,
@@ -87,6 +98,10 @@ export const placeStopLossWatch = (
     timeInForce,
     createdDay: state.day,
   };
+
+  if (!hasWatchCapacity(state)) {
+    return null;
+  }
 
   state.watchOrders.push(order);
   return order;

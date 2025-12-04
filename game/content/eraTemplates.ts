@@ -9,6 +9,8 @@ const eraTemplates = [
       volatilityMultiplier: 0.6,
       eventFrequencyMultiplier: 0.7,
       intradayRangeMultiplier: 0.7,
+      bondYieldMult: 0.95,
+      bondDefaultDelta: -0.002,
     },
     sectorEffects: {},
     eventWeights: {
@@ -17,6 +19,7 @@ const eraTemplates = [
       scandal: 0.5,
     },
     difficulty: "easy",
+    rarity: "common",
   },
   {
     id: "tech-boom",
@@ -27,6 +30,10 @@ const eraTemplates = [
       globalTrendBias: 0.02,
       volatilityMultiplier: 1.2,
       intradayRangeMultiplier: 1.1,
+      bondYieldMult: 0.9,
+      bondDefaultDelta: 0.003,
+      splitThresholdMultiplier: 0.8,
+      ipoFrequencyMultiplier: 1.4,
     },
     sectorEffects: {
       Tech: 0.05,
@@ -39,6 +46,7 @@ const eraTemplates = [
       scandal: 1,
     },
     difficulty: "medium",
+    rarity: "uncommon",
   },
   {
     id: "energy-crisis",
@@ -61,6 +69,7 @@ const eraTemplates = [
       scandal: 1.2,
     },
     difficulty: "hard",
+    rarity: "uncommon",
   },
   {
     id: "liquidity-crunch",
@@ -72,6 +81,10 @@ const eraTemplates = [
       volatilityMultiplier: 1.7,
       eventFrequencyMultiplier: 1.4,
       intradayRangeMultiplier: 1.5,
+      bondYieldMult: 1.2,
+      bondDefaultDelta: 0.01,
+      bankruptcySeverity: 1.3,
+      ipoFrequencyMultiplier: 0.8,
     },
     sectorEffects: {
       FinTech: -0.06,
@@ -83,6 +96,7 @@ const eraTemplates = [
       panic: 1.5,
     },
     difficulty: "very-hard",
+    rarity: "rare",
   },
   {
     id: "recovery",
@@ -93,6 +107,7 @@ const eraTemplates = [
       globalTrendBias: 0.015,
       volatilityMultiplier: 0.9,
       intradayRangeMultiplier: 1,
+      ipoFrequencyMultiplier: 1.2,
     },
     sectorEffects: {
       Retail: 0.02,
@@ -103,6 +118,7 @@ const eraTemplates = [
       "guidance-raise": 1.5,
     },
     difficulty: "medium",
+    rarity: "common",
   },
   {
     id: "inflation-scare",
@@ -124,6 +140,7 @@ const eraTemplates = [
       miss: 2,
     },
     difficulty: "hard",
+    rarity: "uncommon",
   },
   {
     id: "stimulus-wave",
@@ -133,6 +150,8 @@ const eraTemplates = [
       globalTrendBias: 0.03,
       volatilityMultiplier: 1.1,
       intradayRangeMultiplier: 1.2,
+      bondYieldMult: 0.92,
+      ipoFrequencyMultiplier: 1.3,
     },
     sectorEffects: {
       Retail: 0.03,
@@ -143,6 +162,7 @@ const eraTemplates = [
       "guidance-raise": 2,
     },
     difficulty: "easy",
+    rarity: "common",
   },
   {
     id: "crypto-winter",
@@ -153,6 +173,9 @@ const eraTemplates = [
       globalTrendBias: -0.025,
       volatilityMultiplier: 1.8,
       intradayRangeMultiplier: 1.5,
+      bondYieldMult: 1.1,
+      bondDefaultDelta: 0.005,
+      bankruptcySeverity: 1.5,
     },
     sectorEffects: {
       Blockchain: -0.03,
@@ -163,6 +186,7 @@ const eraTemplates = [
       scandal: 2,
     },
     difficulty: "hard",
+    rarity: "rare",
   },
   {
     id: "bubble-euphoria",
@@ -172,6 +196,8 @@ const eraTemplates = [
       globalTrendBias: 0.04,
       volatilityMultiplier: 1.5,
       intradayRangeMultiplier: 1.8,
+      splitThresholdMultiplier: 0.7,
+      ipoFrequencyMultiplier: 1.5,
     },
     sectorEffects: {},
     eventWeights: {
@@ -180,6 +206,7 @@ const eraTemplates = [
       scandal: 1,
     },
     difficulty: "high-risk-high-reward",
+    rarity: "rare",
   },
   {
     id: "regulatory-crackdown",
@@ -201,6 +228,7 @@ const eraTemplates = [
       downgrade: 2,
     },
     difficulty: "medium",
+    rarity: "uncommon",
   },
   {
     id: "earnings-season",
@@ -220,6 +248,7 @@ const eraTemplates = [
       panic: 1.2,
     },
     difficulty: "swingy",
+    rarity: "rare",
   },
   {
     id: "fear-cycle",
@@ -239,6 +268,7 @@ const eraTemplates = [
       downgrade: 2,
     },
     difficulty: "medium",
+    rarity: "uncommon",
   },
   {
     id: "optimism-cycle",
@@ -247,6 +277,7 @@ const eraTemplates = [
     effects: {
       globalTrendBias: 0.02,
       volatilityMultiplier: 1.1,
+      ipoFrequencyMultiplier: 1.1,
     },
     sectorEffects: {
       Tech: 0.04,
@@ -257,6 +288,7 @@ const eraTemplates = [
       "earnings-beat": 2,
     },
     difficulty: "easy",
+    rarity: "common",
   },
   {
     id: "supply-chain-knot",
@@ -276,6 +308,7 @@ const eraTemplates = [
       delay: 2,
     },
     difficulty: "hard",
+    rarity: "uncommon",
   },
   {
     id: "housing-boom",
@@ -294,6 +327,7 @@ const eraTemplates = [
       "earnings-beat": 2,
     },
     difficulty: "easy",
+    rarity: "common",
   },
   {
     id: "housing-bust",
@@ -302,6 +336,8 @@ const eraTemplates = [
     effects: {
       globalTrendBias: -0.04,
       volatilityMultiplier: 1.5,
+      bankruptcySeverity: 1.5,
+      ipoFrequencyMultiplier: 0.6,
     },
     sectorEffects: {
       Infrastructure: -0.08,
@@ -313,6 +349,7 @@ const eraTemplates = [
       panic: 2,
     },
     difficulty: "very-hard",
+    rarity: "rare",
   },
   {
     id: "currency-flux",
@@ -331,6 +368,7 @@ const eraTemplates = [
       scandal: 1,
     },
     difficulty: "chaotic",
+    rarity: "uncommon",
   },
   {
     id: "rate-drop",
@@ -339,6 +377,8 @@ const eraTemplates = [
     effects: {
       globalTrendBias: 0.025,
       volatilityMultiplier: 1.1,
+      splitThresholdMultiplier: 0.9,
+      ipoFrequencyMultiplier: 1.2,
     },
     sectorEffects: {
       Tech: 0.03,
@@ -349,6 +389,7 @@ const eraTemplates = [
       stimulus: 1.5,
     },
     difficulty: "easy",
+    rarity: "common",
   },
   {
     id: "volatility-storm",
@@ -358,6 +399,8 @@ const eraTemplates = [
       globalTrendBias: 0,
       volatilityMultiplier: 2.5,
       intradayRangeMultiplier: 2,
+      splitThresholdMultiplier: 1.1,
+      bankruptcySeverity: 1.3,
     },
     sectorEffects: {},
     eventWeights: {
@@ -365,6 +408,7 @@ const eraTemplates = [
       "bubble-pop": 2,
     },
     difficulty: "extreme",
+    rarity: "rare",
   },
 ];
 

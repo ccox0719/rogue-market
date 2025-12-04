@@ -39,5 +39,10 @@ export const generateCompany = (rng, sectors, forcedSector) => {
         eventAffinity: buildAffinities(rng, sectors),
         correlations: pickCorrelations(rng, sectors, primarySector.name),
         todayRange: buildInitialRange(price),
+        isActive: true,
+        splitReferencePrice: price,
+        splitCount: 0,
+        daysBelowBankruptcyThreshold: 0,
+        daysSinceListing: 0,
     };
 };

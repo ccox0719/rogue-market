@@ -76,11 +76,14 @@ const bootstrap = async () => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "difficulty-choice";
-        button.textContent = `${mode.label} — ${mode.description}`;
         button.dataset.difficulty = mode.id;
         if (mode.id === activeId) {
           button.dataset.active = "true";
         }
+        button.innerHTML = `
+          <strong>${mode.label}</strong>
+          <span>${mode.description}</span>
+        `;
         button.addEventListener("click", () => handleDifficultyChange(mode.id));
         difficultyList.appendChild(button);
       }

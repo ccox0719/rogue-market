@@ -2,7 +2,7 @@ const difficultyModes = [
   {
     id: "novice",
     label: "Novice",
-    description: "Reduced volatility, more starting cash, fewer negative events.",
+    description: "Reduced volatility, extra starting cash, fewer negative events.",
     modifiers: {
       startingCashMultiplier: 1.5,
       volatilityMultiplier: 0.8,
@@ -12,7 +12,7 @@ const difficultyModes = [
   {
     id: "classic",
     label: "Classic",
-    description: "Balanced runs with the default rules.",
+    description: "Balanced runs with standard rules.",
     modifiers: {
       startingCashMultiplier: 1,
       volatilityMultiplier: 1,
@@ -22,7 +22,7 @@ const difficultyModes = [
   {
     id: "iron_trader",
     label: "Iron Trader",
-    description: "Less cash, higher volatility, negatives hurt more.",
+    description: "Less starting cash, higher volatility, punishing downturns.",
     modifiers: {
       startingCashMultiplier: 0.8,
       volatilityMultiplier: 1.15,
@@ -32,7 +32,7 @@ const difficultyModes = [
   {
     id: "endless",
     label: "Endless",
-    description: "No run over, events cascade, voltage high.",
+    description: "No game over. Eras stack, chaos accelerates, markets stay hot.",
     modifiers: {
       startingCashMultiplier: 1,
       volatilityMultiplier: 1.3,

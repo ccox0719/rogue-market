@@ -12,10 +12,10 @@ export const refreshHoldingsPanel = (
   if (!container) return;
   container.innerHTML = "";
 
-  const entries = Object.entries(portfolio.holdings);
+  const entries = Object.entries(portfolio.holdings).filter(([, quantity]) => quantity > 0);
   if (entries.length === 0) {
     const empty = document.createElement("li");
-    empty.textContent = "No positions yet — buy shares to populate holdings.";
+    empty.textContent = "No positions yet - buy shares to populate holdings.";
     container.appendChild(empty);
     return;
   }
@@ -30,7 +30,7 @@ export const refreshHoldingsPanel = (
     if (ticker === selectedTicker) {
       button.classList.add("selected");
     }
-    button.textContent = `${ticker}: ${quantity} sh · ${formatCurrency(value)}`;
+    button.textContent = `${ticker}: ${quantity} sh - ${formatCurrency(value)}`;
     button.addEventListener("click", () => onSelect?.(ticker));
     item.appendChild(button);
     container.appendChild(item);
@@ -43,10 +43,19 @@ export const populateTickerOptions = (
 ): void => {
   if (!select) return;
   select.innerHTML = "";
-  for (const company of companies) {
+  const available = companies.filter((company) => company.isActive);
+  if (available.length === 0) {
+    const placeholder = document.createElement("option");
+    placeholder.disabled = true;
+    placeholder.textContent = "No active listings";
+    select.appendChild(placeholder);
+    return;
+  }
+
+  for (const company of available) {
     const option = document.createElement("option");
     option.value = company.ticker;
-    option.textContent = `${company.ticker} · ${company.name}`;
+    option.textContent = `${company.ticker} - ${company.name}`;
     select.appendChild(option);
   }
 };

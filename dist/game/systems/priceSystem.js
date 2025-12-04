@@ -52,6 +52,8 @@ export const updatePrices = (state, events, rng) => {
         });
         const sectorBonus = company.sector === "Energy" ? state.artifactEffects.energyBonus : 0;
         const sectorEffect = era?.sectorEffects?.[company.sector] ?? 0;
+        const whaleSectorBonus = state.whaleSectorBonuses[company.sector] ?? 0;
+        const whaleCompanyBonus = state.whaleCompanyBonuses[company.id] ?? 0;
         const pct = trend +
             companyTrendDelta +
             sectorTrendDelta +
@@ -60,7 +62,9 @@ export const updatePrices = (state, events, rng) => {
             macro +
             eventShock +
             sectorBonus +
-            sectorEffect;
+            sectorEffect +
+            whaleSectorBonus +
+            whaleCompanyBonus;
         const updatedPrice = Math.max(0.1, open * (1 + pct));
         const close = Number(updatedPrice.toFixed(2));
         company.todayRange = buildIntradayRange(rng, open, close, adjustedVolatility, eraIntraday);

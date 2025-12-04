@@ -110,6 +110,10 @@ export const drawPieChart = (
   const centerY = height / 2;
   let startAngle = -Math.PI / 2;
 
+  if (radius <= 0) {
+    return;
+  }
+
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
 
