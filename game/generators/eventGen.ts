@@ -1,6 +1,6 @@
 import type { RNG } from "../core/rng.js";
 import type { Sector } from "./sectorGen.js";
-import eventTemplates from "../content/eventTemplates.json";
+import eventTemplates from "../content/eventTemplates.js";
 
 export type EventType = "global" | "sector" | "company" | "player_choice";
 export type EventRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";

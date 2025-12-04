@@ -1,6 +1,6 @@
 import type { RNG } from "../core/rng.js";
 import { CONFIG } from "../core/config.js";
-import eraTemplates from "../content/eraTemplates.json";
+import eraTemplates from "../content/eraTemplates.js";
 
 export interface Era {
   id: string;

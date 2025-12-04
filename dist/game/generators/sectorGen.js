@@ -1,4 +1,4 @@
-import sectorsJson from "../content/baseSectors.json";
+import sectorsJson from "../content/baseSectors.js";
 const weightedPick = (rng, items) => {
     const totalWeight = items.reduce((sum, candidate) => sum + candidate.weight, 0);
     let threshold = rng.next() * totalWeight;

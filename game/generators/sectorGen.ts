@@ -1,5 +1,5 @@
 import type { RNG } from "../core/rng.js";
-import sectorsJson from "../content/baseSectors.json";
+import sectorsJson from "../content/baseSectors.js";
 
 export interface Sector {
   name: string;

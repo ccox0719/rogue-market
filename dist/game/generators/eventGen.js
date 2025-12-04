@@ -1,4 +1,4 @@
-import eventTemplates from "../content/eventTemplates.json";
+import eventTemplates from "../content/eventTemplates.js";
 const templates = eventTemplates;
 const RARITY_WEIGHT = {
     common: 1,

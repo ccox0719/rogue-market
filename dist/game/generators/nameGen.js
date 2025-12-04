@@ -1,4 +1,4 @@
-import adjectives from "../content/adjectives.json";
+import adjectives from "../content/adjectives.js";
 const DEFAULT_NOUNS = [
     "Holdings",
     "Networks",

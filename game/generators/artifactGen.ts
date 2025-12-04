@@ -1,4 +1,4 @@
-import artifacts from "../content/baseArtifacts.json";
+import artifacts from "../content/baseArtifacts.js";
 
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 

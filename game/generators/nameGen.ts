@@ -1,5 +1,5 @@
 import type { RNG } from "../core/rng.js";
-import adjectives from "../content/adjectives.json";
+import adjectives from "../content/adjectives.js";
 
 const DEFAULT_NOUNS = [
   "Holdings",

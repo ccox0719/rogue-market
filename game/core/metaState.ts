@@ -1,4 +1,4 @@
-import artifacts from "../content/baseArtifacts.json";
+import artifacts from "../content/baseArtifacts.js";
 import type { Artifact, Rarity } from "../generators/artifactGen.js";
 import { CONFIG, type DifficultyMode } from "./config.js";
 

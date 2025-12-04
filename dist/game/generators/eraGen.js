@@ -1,5 +1,5 @@
 import { CONFIG } from "../core/config.js";
-import eraTemplates from "../content/eraTemplates.json";
+import eraTemplates from "../content/eraTemplates.js";
 const randInt = (rng, min, max) => Math.floor(min + rng.next() * (max - min + 1));
 const pickRandomEraTemplate = (rng, templates) => templates[Math.floor(rng.next() * templates.length)];
 const normalizeEffects = (template) => ({

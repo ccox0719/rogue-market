@@ -1,4 +1,4 @@
-import artifacts from "../content/baseArtifacts.json";
+import artifacts from "../content/baseArtifacts.js";
 import { CONFIG } from "./config.js";
 const DEFAULT_DIFFICULTY = CONFIG.DEFAULT_DIFFICULTY;
 const baseArtifacts = artifacts;
