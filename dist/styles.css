@@ -340,6 +340,14 @@ body {
   align-items: center;
 }
 
+.summary-strip span {
+  flex: 1 1 120px;
+  min-width: 0;
+  word-break: break-word;
+  display: inline-flex;
+  justify-content: space-between;
+}
+
 .summary-strip span:not(:first-child)::before {
   content: "•";
   color: var(--text-muted);
