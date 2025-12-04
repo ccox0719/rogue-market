@@ -1,0 +1,14 @@
+cd /Users/cox/Documents/Cosmo
+./scripts/backup.sh
+
+netlify deploy --prod
+
+git add .
+git commit -m "update"
+git push
+
+npm run export-pages
+
+next edits: 
+
+add a save game button
