@@ -128,6 +128,10 @@ export const initializeUI = (
           <button type="button" data-action="advance-1">Advance 1 Day</button>
           <button type="button" data-action="advance-5">Advance 5 Days</button>
         </div>
+        <div class="stats-card">
+          <h3>Stats</h3>
+          <div class="stats-grid" data-role="stats-grid"></div>
+        </div>
         <div class="stock-card">
           <div class="stock-card__header">
             <div>
@@ -143,9 +147,14 @@ export const initializeUI = (
             <canvas width="360" height="200" data-role="company-chart"></canvas>
           </div>
         </div>
+        <div class="holdings-card">
+          <div class="holdings-card__header">
+            <h3>Holdings</h3>
+          </div>
+          <ul data-role="holdings-list"></ul>
+        </div>
         <div class="stats-card">
-          <h3>Stats</h3>
-          <div class="stats-grid" data-role="stats-grid"></div>
+        </div>
         </div>
         <div class="trade-card">
           <h3>Trade</h3>
@@ -171,12 +180,6 @@ export const initializeUI = (
             <button type="button" data-action="open-watch" class="trigger-new">+ New Trigger</button>
           </div>
           <ul data-role="watch-list"></ul>
-        </div>
-        <div class="holdings-card">
-          <div class="holdings-card__header">
-            <h3>Holdings</h3>
-          </div>
-          <ul data-role="holdings-list"></ul>
         </div>
       </div>
     </section>
