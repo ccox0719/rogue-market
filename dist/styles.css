@@ -1065,6 +1065,34 @@ li {
     flex-basis: 100%;
     justify-content: flex-start;
   }
+
+  .stock-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .stock-card__header > div:first-child {
+    width: 100%;
+  }
+
+  .stock-card__price {
+    align-items: flex-start;
+  }
+
+  .stock-card__label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+  }
+
+  .ohlc-row {
+    flex-wrap: wrap;
+    gap: 0.25rem 0.65rem;
+  }
+
+  .ohlc-chip {
+    font-size: 0.65rem;
+  }
 }
 
 .artifact-grid {
