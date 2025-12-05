@@ -6,7 +6,7 @@ import { advanceEraProgress, getCurrentEra } from "../systems/eraSystem.js";
 import { portfolioValue } from "../systems/portfolioSystem.js";
 import { saveRun } from "../saves/saveManager.js";
 import { saveMeta } from "../saves/metaSave.js";
-import { awardXp, defaultMetaState, getDifficultyRating, recordRunOutcome, setActiveCampaign, setActiveChallenge, addLegacyBuff, unlockCampaign, recordCampaignRun, recordChallengeScore, setDifficulty, } from "./metaState.js";
+import { awardXp, defaultMetaState, getDifficultyRating, recordRunOutcome, setActiveCampaign, setActiveChallenge, addLegacyBuff, unlockCampaign, recordCampaignRun, recordChallengeScore, setDifficulty, resetXp, } from "./metaState.js";
 import { progressArtifact } from "../systems/metaProgress.js";
 import { aggregateArtifactEffects } from "./artifactEffects.js";
 import { applyArtifactsToState } from "../systems/artifactSystem.js";
@@ -16,10 +16,16 @@ import { createEraFromTemplate, findEraTemplate } from "../generators/eraGen.js"
 import { processWatchOrdersForDay } from "../systems/watchOrders.js";
 import { initializeWhales, updateWhaleInfluence, } from "../systems/whaleSystem.js";
 import { initializeBondMarket, processBondsForDay, refreshBondMarket, } from "../systems/bondSystem.js";
-import { bankruptCompany, processStockLifecycle, spawnIPO, splitCompany, } from "../systems/lifecycleSystem.js";
+import { bankruptCompany, processStockLifecycle, recordLifecycleEvent, spawnIPO, splitCompany, } from "../systems/lifecycleSystem.js";
 import { aggregateLegacyBuffEffects, mergeEffectDescriptors, pickLegacyBuff } from "../systems/legacyBuffSystem.js";
 import { campaignLibrary, findCampaign } from "../content/campaigns.js";
 import { findChallengeMode } from "../content/challengeModes.js";
+import { createStoryRunnerState, triggerStoryScenes, buildSceneEvents, createStoryContextSnapshot, } from "../../story/story-runner.js";
+import { updateWhaleCapital } from "../systems/whaleCapitalSystem.js";
+import { emitMarketNews as enqueueMarketNews } from "../news/news-runner.js";
+import { applyWhaleBuyout, applyWhaleCollapseIfNeeded, } from "../whales/whale-defeat.js";
+import { applyStorySceneEffects } from "../../story/story-effects.js";
+import { pickRandomMiniGameEvent } from "../minigames/eventLibrary.js";
 const ARTIFACT_UNLOCK_TIERS = [
     { value: 5000, artifactId: "neon_compass" },
     { value: 15000, artifactId: "rumor_network" },
@@ -34,6 +40,9 @@ const ERA_MUTATIONS = {
     "optimism-cycle": ["bubble-euphoria"],
     "fear-cycle": ["liquidity-crunch"],
 };
+const MINI_GAME_BASE_CHANCE = 0.08;
+const MINI_GAME_MAX_CHANCE = 0.18;
+const MINI_GAME_LEVEL_BONUS = 0.005;
 export class GameRunner {
     constructor(options = {}) {
         this.finalised = false;
@@ -63,6 +72,7 @@ export class GameRunner {
             difficulty: this.difficulty,
         });
         initializeWhales(this.state, this.rng);
+        this.storyRunner = createStoryRunnerState(this.state);
         initializeBondMarket(this.state, this.rng);
         this.applyCampaignModifiers();
         this.applyChallengeModifiers();
@@ -73,6 +83,7 @@ export class GameRunner {
             this.state.eras[0].revealed = true;
         }
         this.updateNextEraPrediction();
+        this.emitStoryCutscenes("start");
         saveRun(this.state);
         saveMeta(this.metaState);
     }
@@ -95,8 +106,10 @@ export class GameRunner {
     runDay() {
         if (this.state.runOver)
             return;
+        this.state.whaleDefeatedThisTick = false;
         this.maybeMutateCurrentEra();
         updateWhaleInfluence(this.state, this.rng, this.metaState);
+        this.emitStoryCutscenes("whale");
         const era = this.state.eras[this.state.currentEraIndex];
         const eventMultiplier = era?.effects?.eventFrequencyMultiplier ?? 1;
         const weightedChance = this.state.eventChance * eventMultiplier;
@@ -115,22 +128,34 @@ export class GameRunner {
     }
     completeDay(events) {
         updatePrices(this.state, events, this.rng);
+        updateWhaleCapital(this.state);
         processStockLifecycle(this.state, this.rng);
         processWatchOrdersForDay(this.state);
         processBondsForDay(this.state, this.rng);
+        applyWhaleCollapseIfNeeded(this.state);
+        if (this.state.whaleCollapsedThisTick) {
+            this.emitStoryCutscenes("whale");
+            this.state.whaleCollapsedThisTick = false;
+        }
         const eraTransition = advanceEraProgress(this.state, this.rng, this.difficulty);
         if (eraTransition.eraChanged) {
             this.handleEraTransition(eraTransition.deckReset);
+            this.emitStoryCutscenes("era");
         }
         this.recordDailyStats();
+        this.emitStoryCutscenes("portfolio");
+        this.emitMarketNews();
+        this.emitStoryCutscenes("day");
         this.state.day += 1;
         this.checkArtifactUnlocks();
         this.maybeOfferArtifactReward();
+        this.maybeSpawnMiniGameEvent();
         saveRun(this.state);
         this.onSave?.(this.state);
-        if (!this.difficulty.special?.noRunOver &&
-            this.state.day > this.state.totalDays) {
-            this.state.runOver = true;
+        this.state.whaleDefeatMode = null;
+        this.state.whaleCollapseReason = null;
+        if (this.state.runOver) {
+            this.emitStoryCutscenes("final");
         }
         if (this.state.runOver && !this.finalised) {
             this.finalizeRun();
@@ -140,8 +165,21 @@ export class GameRunner {
         if (this.state.runOver)
             return;
         updateWhaleInfluence(this.state, this.rng, this.metaState);
+        this.emitStoryCutscenes("whale");
         saveRun(this.state);
         this.onSave?.(this.state);
+    }
+    attemptWhaleBuyout() {
+        if (this.state.runOver)
+            return false;
+        const success = applyWhaleBuyout(this.state);
+        if (!success) {
+            return false;
+        }
+        this.emitStoryCutscenes("whale");
+        saveRun(this.state);
+        this.onSave?.(this.state);
+        return true;
     }
     forceEraMutation() {
         if (this.state.runOver)
@@ -217,6 +255,15 @@ export class GameRunner {
         saveMeta(this.metaState);
         this.notifyMetaChange();
         this.logDevAction(`Injected ${amount} XP.`);
+    }
+    resetMetaXp() {
+        if (this.state.runOver)
+            return;
+        this.metaState = resetXp(this.metaState);
+        this.refreshArtifactEffects();
+        saveMeta(this.metaState);
+        this.notifyMetaChange();
+        this.logDevAction("Meta XP reset to 0.");
     }
     grantRandomArtifact() {
         if (this.state.runOver)
@@ -298,6 +345,41 @@ export class GameRunner {
             this.state.devActionLog.shift();
         }
     }
+    consumeStoryScenes() {
+        const scenes = [...this.state.storySceneQueue];
+        this.state.storySceneQueue = [];
+        return scenes;
+    }
+    consumeMarketNews() {
+        const items = [...this.state.newsQueue];
+        this.state.newsQueue = [];
+        return items;
+    }
+    emitStoryCutscenes(trigger) {
+        const extras = {
+            level: this.metaState.level,
+            xp: this.metaState.xp,
+        };
+        const scenes = triggerStoryScenes(this.storyRunner, this.state, trigger, extras);
+        if (scenes.length === 0)
+            return;
+        applyStorySceneEffects(this.state, scenes);
+        const contextSnapshot = createStoryContextSnapshot(this.storyRunner);
+        const events = buildSceneEvents(scenes, this.state.day, contextSnapshot);
+        this.state.storySceneQueue.push(...events);
+        for (const scene of scenes) {
+            this.state.storyEventLog.push(`${scene.actId}:${scene.id}`);
+            if (this.state.storyEventLog.length > CONFIG.STORY_LOG_LIMIT) {
+                this.state.storyEventLog.shift();
+            }
+        }
+    }
+    emitMarketNews() {
+        const items = enqueueMarketNews(this.state);
+        this.state.recentNews = items;
+        this.state.newsDecisionUsed = false;
+        return items;
+    }
     getLevelArtifactDescriptor() {
         const { level } = this.metaState;
         const descriptor = {};
@@ -376,6 +458,23 @@ export class GameRunner {
         this.state.pendingArtifactReward = options;
         this.artifactRewardMilestones.add(completedDay);
         this.state.artifactRewardHistory.push(completedDay);
+    }
+    maybeSpawnMiniGameEvent() {
+        if (this.state.pendingMiniGame)
+            return;
+        if (this.state.pendingChoice || this.state.pendingArtifactReward)
+            return;
+        const currentDay = this.state.day;
+        if (currentDay <= this.state.lastMiniGameDay)
+            return;
+        const chance = Math.min(MINI_GAME_MAX_CHANCE, MINI_GAME_BASE_CHANCE + this.metaState.level * MINI_GAME_LEVEL_BONUS);
+        if (this.rng.next() >= chance) {
+            return;
+        }
+        const event = pickRandomMiniGameEvent(() => this.rng.next());
+        this.state.pendingMiniGame = event;
+        this.state.lastMiniGameDay = currentDay;
+        recordLifecycleEvent(this.state, `Side hustle drops: ${event.title}. ${event.story}`);
     }
     claimArtifactReward(artifactId) {
         if (!this.state.pendingArtifactReward?.includes(artifactId))

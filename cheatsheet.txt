@@ -11,4 +11,4 @@ npm run export-pages
 
 next edits: 
 
-Artifact rewards are way to easy to get they need to feel earned.
+note: remember to rebuild with `npm run export-pages` and commit the generated `dist/` folder so the published site contains the runtime bundles for the simulation modules.

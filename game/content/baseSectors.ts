@@ -99,6 +99,36 @@ const baseSectors = [
       nouns: ["Launch", "Orbit", "Array", "Updraft"],
     },
   },
+  {
+    name: "Mobility",
+    weight: 0.9,
+    correlation: 0.52,
+    description: "Autonomous transit, hyperloop connectors, and drone logistics.",
+    branding: {
+      adjectives: ["Vector", "Pulse", "Grit", "Kinetic"],
+      nouns: ["Transit", "Dynamics", "Loop", "Fleet"],
+    },
+  },
+  {
+    name: "Security",
+    weight: 0.8,
+    correlation: 0.48,
+    description: "Cyber defenders, orbital shields, and biometric gateways.",
+    branding: {
+      adjectives: ["Guardian", "Sentinel", "Iron", "Veil"],
+      nouns: ["Shield", "Wall", "Fortress", "Protocol"],
+    },
+  },
+  {
+    name: "Agritech",
+    weight: 0.75,
+    correlation: 0.3,
+    description: "Hydroponic farms, biotech seeds, and food-precision robotics.",
+    branding: {
+      adjectives: ["Verdant", "Harvest", "Root", "Sprout"],
+      nouns: ["Fields", "Labs", "Biosystems", "Plenum"],
+    },
+  },
 ];
 
 export default baseSectors;

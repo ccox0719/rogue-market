@@ -76,6 +76,12 @@ export const awardXp = (meta: MetaProfile, amount: number): MetaProfile => {
   return { ...meta, xp, level };
 };
 
+export const resetXp = (meta: MetaProfile): MetaProfile => {
+  const xp = 0;
+  const level = calculateLevelFromXp(xp);
+  return { ...meta, xp, level };
+};
+
 export const unlockArtifact = (meta: MetaProfile, artifactId: string): MetaProfile => {
   const artifacts = meta.artifacts.map((artifact) =>
     artifact.id === artifactId ? { ...artifact, unlocked: true } : artifact

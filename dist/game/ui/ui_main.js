@@ -5,27 +5,39 @@ import { formatCurrency, createListItem } from "./ui_helpers.js";
 import { refreshHoldingsPanel, populateTickerOptions } from "./ui_portfolio.js";
 import { renderEventList } from "./ui_events.js";
 import { renderEraList } from "./ui_eras.js";
+import { initializeNewsUI } from "./ui_news.js";
 import { initializeMetaPanel } from "./ui_meta.js";
-import { findArtifactDefinition } from "../generators/artifactGen.js";
-import { findWhaleProfile } from "../generators/whaleGen.js";
+import { bindWhaleBuyoutHandler, renderWhaleInfluenceBar } from "./whale-influence-ui.js";
+import { renderWhaleDialogue } from "./whale-dialogue-ui.js";
+import { renderWhalePortrait } from "./whale-portrait-ui.js";
 import { CONFIG } from "../core/config.js";
 import { buyBondFromListing } from "../systems/bondSystem.js";
+import { recordLifecycleEvent } from "../systems/lifecycleSystem.js";
+import { launchDeliveryTimingMiniGame } from "../minigames/deliveryTiming.js";
+import { launchPhoneUnlockMiniGame } from "../minigames/phoneUnlock.js";
+import { launchGarageCleanoutMiniGame } from "../minigames/garageCleanout.js";
+import { createMiniGameEvent, } from "../minigames/eventLibrary.js";
 import { findBondDefinition } from "../generators/bondGen.js";
 import { campaignLibrary, findCampaign, } from "../content/campaigns.js";
 import { challengeLibrary, } from "../content/challengeModes.js";
+import { findWhaleProfile } from "../generators/whaleGen.js";
+import { STORY_ACTS } from "../../story/story-flow.js";
 export const initializeUI = (runner, container, options = {}) => {
     container.classList.add("app-shell");
     container.innerHTML = `
     <div class="view-shell">
-      <nav class="view-menu">
-        <button type="button" class="view-menu__item view-menu__item--active" data-view-target="dashboard">
-          Run Dashboard
-        </button>
+        <nav class="view-menu">
+          <button type="button" class="view-menu__item view-menu__item--active" data-view-target="dashboard">
+            Run Dashboard
+          </button>
         <button type="button" class="view-menu__item" data-view-target="progression">
           Progression
         </button>
         <button type="button" class="view-menu__item" data-view-target="market">
           Market Info
+        </button>
+        <button type="button" class="view-menu__item" data-view-target="whales">
+          Whales
         </button>
         <button type="button" class="view-menu__item" data-view-target="dev">
           Dev Tools
@@ -92,16 +104,47 @@ export const initializeUI = (runner, container, options = {}) => {
                 </form>
                 <p class="feedback" data-role="trade-feedback"></p>
               </div>
-              <div class="trigger-card">
-                <div class="trigger-card__header">
-                  <h3>Triggers</h3>
-                  <button type="button" data-action="open-watch" class="trigger-new">+ New Trigger</button>
+                <div class="trigger-card">
+                  <div class="trigger-card__header">
+                    <h3>Triggers</h3>
+                    <button type="button" data-action="open-watch" class="trigger-new">+ New Trigger</button>
+                  </div>
+                  <ul data-role="watch-list"></ul>
                 </div>
-                <ul data-role="watch-list"></ul>
+                <div class="side-hustle-card">
+                  <div class="side-hustle-card__header">
+                    <h3 data-role="side-hustle-title">Side Hustle</h3>
+                    <p class="side-hustle-card__subtitle" data-role="side-hustle-subtitle">
+                      Side gigs drop in randomly—keep an eye on the board.
+                    </p>
+                  </div>
+                  <p class="side-hustle-card__story" data-role="side-hustle-story">
+                    No gigs are active right now. Pause and listen to the neighborhood.
+                  </p>
+                  <button type="button" class="side-hustle-card__button" data-action="start-mini-game" disabled>
+                    Watch the board
+                  </button>
+                </div>
+                <div class="bond-market-section">
+                <div class="bond-market-section__header">
+                  <h3>Bond Market</h3>
+                </div>
+                <div class="bond-market-grid">
+                  <div class="bond-market__list">
+                    <h4>Available Bonds</h4>
+                    <ul data-role="bond-market-list"></ul>
+                  </div>
+                  <div class="bond-market__holdings">
+                    <h4>Your Holdings</h4>
+                    <ul data-role="bond-holdings-list"></ul>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
         </article>
+
+        <button type="button" class="story-toggle" data-action="toggle-story">Story: On</button>
 
         <article class="view-page" data-view="progression">
           <section class="panel meta-panel" data-panel="meta">
@@ -140,25 +183,22 @@ export const initializeUI = (runner, container, options = {}) => {
                   <strong data-role="meta-level">1</strong>
                 </div>
               </div>
-              <p class="meta-note">
-                Artifacts you unlock between runs permanently alter pacing, volatility, or information flow.
-              </p>
+              <div class="story-gauge" data-role="story-gauge">
+                <div class="story-gauge__labels">
+                  <span class="story-gauge__act" data-role="story-gauge-act">Act I — Startup Gamble</span>
+                  <span class="story-gauge__day" data-role="story-gauge-day">Day 1 / 30</span>
+                </div>
+                <div class="story-gauge__bar">
+                  <div class="story-gauge__fill" data-role="story-gauge-fill"></div>
+                </div>
+                <p class="story-gauge__desc" data-role="story-gauge-desc">
+                  You’re just getting started.
+                </p>
+              </div>
               <div class="difficulty-section">
                 <p class="meta-note">Select difficulty for your next run:</p>
                 <div class="difficulty-grid" data-role="difficulty-grid"></div>
               </div>
-              <div class="artifact-grid" data-role="artifact-grid"></div>
-            </div>
-          </section>
-
-          <section class="panel artifact-panel" data-panel="artifacts">
-            <header class="panel-header">
-              <h2>Artifacts</h2>
-              <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
-            </header>
-            <div class="panel-body">
-              <p class="meta-note">Activate artifacts to fine-tune volatility, pacing, and insight.</p>
-              <ul class="artifact-list" data-role="active-artifacts"></ul>
             </div>
           </section>
 
@@ -216,18 +256,6 @@ export const initializeUI = (runner, container, options = {}) => {
                   <canvas width="140" height="160" data-role="summary-watch-pie"></canvas>
                 </div>
               </div>
-              <div class="summary-strip">
-                <span data-role="summary-strip-day"></span>
-                <span data-role="summary-strip-era"></span>
-                <span data-role="summary-strip-progress"></span>
-                <span data-role="summary-strip-cash"></span>
-                <span data-role="summary-strip-margin"></span>
-                <span data-role="summary-strip-best"></span>
-                <span data-role="summary-strip-xp"></span>
-                <span data-role="summary-strip-level"></span>
-                <span data-role="summary-strip-prediction"></span>
-                <span data-role="summary-strip-mutation"></span>
-              </div>
             </div>
           </section>
 
@@ -241,20 +269,6 @@ export const initializeUI = (runner, container, options = {}) => {
             </div>
           </section>
 
-          <section class="panel whales-panel" data-panel="whales">
-            <header class="panel-header">
-              <h2>Market Personalities</h2>
-              <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
-            </header>
-            <div class="panel-body">
-              <p class="meta-note">
-                Analysts uncover active whales as you level up.
-              </p>
-              <ul class="whale-list" data-role="whale-list"></ul>
-              <ul class="whale-log" data-role="whale-log"></ul>
-            </div>
-          </section>
-
           <section class="panel lifecycle-panel" data-panel="lifecycle">
             <header class="panel-header">
               <h2>Market Lifecycle</h2>
@@ -265,22 +279,51 @@ export const initializeUI = (runner, container, options = {}) => {
             </div>
           </section>
 
-          <section class="panel bonds-panel" data-panel="bonds">
+        </article>
+        <article class="view-page" data-view="whales">
+          <section class="panel whale-panel" data-panel="whale">
             <header class="panel-header">
-              <h2>Bond Market</h2>
-              <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
+              <h2>Whale Watch</h2>
+              <span data-role="whale-panel-day">Day 1</span>
             </header>
             <div class="panel-body">
-              <div class="bond-market-grid">
-                <div class="bond-market__list">
-                  <h3>Available Bonds</h3>
-                  <ul data-role="bond-market-list"></ul>
-                </div>
-                <div class="bond-market__holdings">
-                  <h3>Your Holdings</h3>
-                  <ul data-role="bond-holdings-list"></ul>
+              <div id="whale-portrait" class="whale-portrait">
+                <div class="whale-portrait-glow"></div>
+                <div class="whale-portrait-inner">
+                  <div id="whale-portrait-icon" class="whale-portrait-icon">?</div>
+                  <div class="whale-portrait-meta">
+                    <div id="whale-portrait-name" class="whale-portrait-name">Whale Name</div>
+                    <div id="whale-portrait-title" class="whale-portrait-title">Title / Archetype</div>
+                  </div>
                 </div>
               </div>
+              <div id="whale-influence" class="whale-influence">
+                <div class="whale-influence-header">
+                  <span id="whale-influence-player-label">You</span>
+                  <span id="whale-influence-center-label">Influence Balance</span>
+                  <span id="whale-influence-whale-label">Whale</span>
+                </div>
+                <div class="whale-influence-bar">
+                  <div id="whale-influence-fill-player" class="whale-influence-fill whale-influence-fill--player"></div>
+                  <div id="whale-influence-fill-whale" class="whale-influence-fill whale-influence-fill--whale"></div>
+                  <div id="whale-influence-marker" class="whale-influence-marker"></div>
+                </div>
+                <div class="whale-influence-footer">
+                  <span id="whale-influence-player-value"></span>
+                  <span id="whale-influence-status" class="whale-influence-status"></span>
+                  <span id="whale-influence-whale-value"></span>
+                </div>
+                <div class="whale-influence-actions">
+                  <button id="whale-buyout-button" class="whale-buyout-button" disabled>
+                    Challenge Whale
+                  </button>
+                </div>
+              </div>
+              <div class="whale-dialogue" data-role="whale-dialogue">
+                <h3 class="whale-dialogue__heading">Whale Dialogue</h3>
+                <ul class="whale-dialogue__list" data-role="whale-dialogue-list"></ul>
+              </div>
+              <div class="whale-panel__list" data-role="whale-panel-list"></div>
             </div>
           </section>
         </article>
@@ -292,44 +335,29 @@ export const initializeUI = (runner, container, options = {}) => {
               <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
             </header>
             <div class="panel-body">
-              <div class="dev-drawer__controls">
-                <div class="dev-drawer__section">
-                  <p class="dev-drawer__label">Whale controls</p>
-                  <button type="button" data-action="dev-trigger-whales">Ping whales</button>
-                  <button type="button" data-action="dev-force-mutation">Force mutation</button>
-                  <button type="button" data-action="dev-reveal-whales">Reveal whales</button>
-                </div>
-                <div class="dev-drawer__section">
-                  <p class="dev-drawer__label">Artifact controls</p>
-                  <button type="button" data-action="dev-grant-artifact">Grant random artifact</button>
-                  <button type="button" data-action="dev-artifact-reward">Offer artifact reward</button>
-                </div>
-                <div class="dev-drawer__section">
-                  <p class="dev-drawer__label">XP controls</p>
-                  <button type="button" data-action="dev-award-xp-small">+500 XP</button>
-                  <button type="button" data-action="dev-award-xp-large">+2000 XP</button>
-                </div>
-                <div class="dev-drawer__section">
-                  <p class="dev-drawer__label">Lifecycle controls</p>
-                  <button type="button" data-action="dev-trigger-ipo">Spawn IPO</button>
-                  <button type="button" data-action="dev-trigger-split">Force split</button>
-                  <button type="button" data-action="dev-trigger-bankruptcy">Trigger bankruptcy</button>
-                </div>
-              </div>
-            </div>
+        <div class="dev-drawer__controls">
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">XP controls</p>
+            <button type="button" data-action="dev-award-xp-small">+500 XP</button>
+            <button type="button" data-action="dev-award-xp-large">+2000 XP</button>
+            <button type="button" data-action="dev-reset-xp">Reset XP</button>
+          </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Lifecycle controls</p>
+            <button type="button" data-action="dev-trigger-ipo">Spawn IPO</button>
+            <button type="button" data-action="dev-trigger-split">Force split</button>
+            <button type="button" data-action="dev-trigger-bankruptcy">Trigger bankruptcy</button>
+          </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Mini-games</p>
+            <button type="button" data-action="dev-open-delivery">Launch Delivery Timing</button>
+            <button type="button" data-action="dev-open-phone">Launch Phone Unlock</button>
+            <button type="button" data-action="dev-open-garage">Launch Garage Cleanout</button>
+          </div>
+        </div>
+      </div>
           </section>
         </article>
-      </div>
-    </div>
-
-    <div class="artifact-reward" data-role="artifact-reward-panel" hidden>
-      <div class="artifact-reward__content">
-        <h3>Artifact Reward</h3>
-        <p>Choose one artifact to apply for this run.</p>
-        <ul data-role="artifact-reward-list"></ul>
-        <div class="artifact-reward__actions">
-          <button type="button" data-action="artifact-reward-skip">Skip</button>
-        </div>
       </div>
     </div>
 
@@ -398,7 +426,141 @@ export const initializeUI = (runner, container, options = {}) => {
         </div>
       </div>
     </div>
+    <!-- Delivery Timing Mini-game Overlay -->
+    <div id="minigame-delivery-overlay" class="minigame-overlay">
+      <div class="minigame-panel">
+        <div class="minigame-header">
+          <div class="minigame-title">Tip Run - Delivery</div>
+          <div class="minigame-subtitle">
+            Stop the marker in the green zone to earn tips.
+          </div>
+        </div>
+
+        <div class="minigame-bar-wrapper">
+          <div class="minigame-bar">
+            <div class="minigame-bar-zone"></div>
+            <div class="minigame-bar-marker"></div>
+          </div>
+        </div>
+        <div id="minigame-delivery-phase" class="minigame-delivery-phase">
+          Phase 1 / 3 · Comfort tip
+        </div>
+
+        <div class="minigame-footer">
+          <button id="minigame-delivery-start" class="minigame-btn">
+            Start
+          </button>
+          <button id="minigame-delivery-stop" class="minigame-btn" disabled>
+            Stop!
+          </button>
+          <button
+            id="minigame-delivery-close"
+            class="minigame-btn minigame-btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <div id="minigame-delivery-result" class="minigame-result"></div>
+      </div>
+    </div>
+    <!-- Phone Unlock Mini-game Overlay -->
+    <div id="minigame-phone-overlay" class="minigame-overlay">
+      <div class="minigame-panel">
+        <div class="minigame-header">
+          <div class="minigame-title">Phone Unlock – Memory</div>
+          <div class="minigame-subtitle">
+            Watch the symbols, then repeat the pattern to earn cash.
+          </div>
+        </div>
+
+        <div class="minigame-phone-display">
+          <div id="minigame-phone-sequence" class="minigame-phone-sequence"></div>
+          <div id="minigame-phone-status" class="minigame-phone-status">
+            Press Start to see the pattern.
+          </div>
+        </div>
+
+        <div class="minigame-phone-input">
+          <button class="minigame-phone-symbol" data-symbol="0">◆</button>
+          <button class="minigame-phone-symbol" data-symbol="1">●</button>
+          <button class="minigame-phone-symbol" data-symbol="2">▲</button>
+          <button class="minigame-phone-symbol" data-symbol="3">★</button>
+        </div>
+
+        <div class="minigame-footer">
+          <button id="minigame-phone-start" class="minigame-btn">
+            Start
+          </button>
+          <button id="minigame-phone-submit" class="minigame-btn" disabled>
+            Submit
+          </button>
+          <button id="minigame-phone-close" class="minigame-btn minigame-btn-secondary">
+            Cancel
+          </button>
+        </div>
+
+    <div id="minigame-phone-result" class="minigame-result"></div>
+  </div>
+</div>
+    <!-- Garage Cleanout Mini-game Overlay -->
+    <div id="minigame-garage-overlay" class="minigame-overlay">
+      <div class="minigame-panel">
+        <div class="minigame-header">
+          <div class="minigame-title">Garage Cleanout</div>
+          <div class="minigame-subtitle">
+            Pick a box. Some are junk; some are hidden treasure.
+          </div>
+        </div>
+
+        <div class="minigame-garage-grid">
+          <button class="minigame-garage-box" data-box="0">📦</button>
+          <button class="minigame-garage-box" data-box="1">📦</button>
+          <button class="minigame-garage-box" data-box="2">📦</button>
+          <button class="minigame-garage-box" data-box="3">📦</button>
+          <button class="minigame-garage-box" data-box="4">📦</button>
+        </div>
+
+        <div id="minigame-garage-label" class="minigame-garage-label">
+          Choose one box.
+        </div>
+
+    <div class="minigame-footer">
+      <button id="minigame-garage-lockin" class="minigame-btn">
+        Lock It In
+      </button>
+      <button id="minigame-garage-close" class="minigame-btn minigame-btn-secondary">
+        Cancel
+      </button>
+    </div>
+
+        <div id="minigame-garage-result" class="minigame-result"></div>
+      </div>
+    </div>
   `;
+    container.insertAdjacentHTML("beforeend", `
+    <div class="story-dialog" data-role="story-dialog" hidden>
+      <div class="story-dialog__inner">
+        <p data-role="story-line"></p>
+        <button type="button" data-action="story-continue">Continue</button>
+      </div>
+    </div>
+    `);
+    container.insertAdjacentHTML("beforeend", `
+    <div class="news-modal" data-role="news-modal" hidden>
+      <div class="news-modal__dialog">
+        <header class="news-modal__header">
+          <span>Market News</span>
+          <button type="button" class="news-modal__close" data-action="close-news-modal" aria-label="Close news modal">Close</button>
+        </header>
+        <div class="news-modal__body" data-role="news-modal-body"></div>
+      </div>
+    </div>
+    <div class="news-ticker" data-role="news-ticker">
+      <button type="button" class="news-ticker__launch" data-action="open-news-modal">News</button>
+      <div class="news-ticker__inner" data-role="news-ticker-inner"></div>
+    </div>
+    `);
     const tickerTape = container.querySelector("[data-role='ticker-tape']");
     const tickerStrip = container.querySelector("[data-role='ticker-strip']");
     const summaryStripDay = container.querySelector("[data-role='summary-strip-day']");
@@ -415,6 +577,10 @@ export const initializeUI = (runner, container, options = {}) => {
     const summaryDistribution = container.querySelector("[data-role='summary-distribution']");
     const summaryEraTimeline = container.querySelector("[data-role='summary-era-timeline']");
     const summaryWatchPie = container.querySelector("[data-role='summary-watch-pie']");
+    const storyGaugeAct = container.querySelector("[data-role='story-gauge-act']");
+    const storyGaugeDay = container.querySelector("[data-role='story-gauge-day']");
+    const storyGaugeFill = container.querySelector("[data-role='story-gauge-fill']");
+    const storyGaugeDesc = container.querySelector("[data-role='story-gauge-desc']");
     const eraList = container.querySelector("[data-role='era-list']");
     const eventList = container.querySelector("[data-role='event-list']");
     const holdingsList = container.querySelector("[data-role='holdings-list']");
@@ -446,35 +612,39 @@ export const initializeUI = (runner, container, options = {}) => {
     const watchSaveButton = container.querySelector("[data-action='watch-save']");
     const watchCancelButton = container.querySelector("[data-action='watch-cancel']");
     const watchCloseButton = container.querySelector("[data-action='watch-close']");
+    const miniGameTitle = container.querySelector("[data-role='side-hustle-title']");
+    const miniGameSubtitle = container.querySelector("[data-role='side-hustle-subtitle']");
+    const miniGameStory = container.querySelector("[data-role='side-hustle-story']");
+    const miniGameButton = container.querySelector("[data-action='start-mini-game']");
     const watchFeedback = container.querySelector("[data-role='watch-feedback']");
+    const storyDialog = container.querySelector("[data-role='story-dialog']");
+    const storyLine = container.querySelector("[data-role='story-line']");
+    const storyContinueButton = container.querySelector("[data-action='story-continue']");
     const watchFieldCash = container.querySelector("[data-watch='cash']");
     const watchFieldShares = container.querySelector("[data-watch='shares']");
     const metaPanelContainer = container.querySelector(".meta-panel");
-    const activeArtifactList = container.querySelector("[data-role='active-artifacts']");
-    const artifactRewardPanel = container.querySelector("[data-role='artifact-reward-panel']");
-    const artifactRewardList = container.querySelector("[data-role='artifact-reward-list']");
-    const artifactRewardSkip = container.querySelector("[data-action='artifact-reward-skip']");
     const campaignObjectiveEl = container.querySelector("[data-role='campaign-objective']");
     const campaignProgressList = container.querySelector("[data-role='campaign-progress']");
     const challengeList = container.querySelector("[data-role='challenge-list']");
     const carryPanel = container.querySelector("[data-role='carry-panel']");
     const carryList = container.querySelector("[data-role='carry-list']");
     const carryCloseButton = container.querySelector("[data-action='carry-close']");
-    const whaleList = container.querySelector("[data-role='whale-list']");
-    const whaleLog = container.querySelector("[data-role='whale-log']");
     const bondMarketList = container.querySelector("[data-role='bond-market-list']");
     const bondHoldingsList = container.querySelector("[data-role='bond-holdings-list']");
     const lifecycleLogList = container.querySelector("[data-role='lifecycle-log']");
-    const devTriggerWhalesButton = container.querySelector("[data-action='dev-trigger-whales']");
-    const devForceMutationButton = container.querySelector("[data-action='dev-force-mutation']");
-    const devRevealWhalesButton = container.querySelector("[data-action='dev-reveal-whales']");
-    const devGrantArtifactButton = container.querySelector("[data-action='dev-grant-artifact']");
-    const devArtifactRewardButton = container.querySelector("[data-action='dev-artifact-reward']");
     const devAwardXpSmallButton = container.querySelector("[data-action='dev-award-xp-small']");
     const devAwardXpLargeButton = container.querySelector("[data-action='dev-award-xp-large']");
     const devTriggerIpoButton = container.querySelector("[data-action='dev-trigger-ipo']");
     const devTriggerSplitButton = container.querySelector("[data-action='dev-trigger-split']");
     const devTriggerBankruptcyButton = container.querySelector("[data-action='dev-trigger-bankruptcy']");
+    const devResetXpButton = container.querySelector("[data-action='dev-reset-xp']");
+    const devOpenDeliveryButton = container.querySelector("[data-action='dev-open-delivery']");
+    const devOpenPhoneButton = container.querySelector("[data-action='dev-open-phone']");
+    const devOpenGarageButton = container.querySelector("[data-action='dev-open-garage']");
+    const storyEventQueue = [];
+    let activeStoryEvent = null;
+    let activeStoryLineIndex = 0;
+    const STORY_MODAL_CLASS = "story-modal-open";
     let currentMeta = options.metaState ?? runner.metaState;
     let selectedTicker = undefined;
     const summaryHistory = [];
@@ -482,6 +652,78 @@ export const initializeUI = (runner, container, options = {}) => {
         "limit-buy": "#00C853",
         "limit-sell": "#FF5252",
         "stop-loss": "#4FC3F7",
+    };
+    const storyToggleButton = container.querySelector("[data-action='toggle-story']");
+    const STORY_TOGGLE_KEY = "rogue-market-story-enabled";
+    const readStoryPreference = () => {
+        if (!window?.localStorage) {
+            return true;
+        }
+        try {
+            const raw = window.localStorage.getItem(STORY_TOGGLE_KEY);
+            if (raw === null) {
+                return true;
+            }
+            return raw === "1";
+        }
+        catch {
+            return true;
+        }
+    };
+    let storyEnabled = readStoryPreference();
+    const updateStoryToggleLabel = () => {
+        if (!storyToggleButton)
+            return;
+        storyToggleButton.textContent = storyEnabled ? "Story: On" : "Story: Off";
+        storyToggleButton.classList.toggle("story-toggle--disabled", !storyEnabled);
+    };
+    const newsUI = initializeNewsUI(container);
+    const whalePanelList = container.querySelector("[data-role='whale-panel-list']");
+    const whalePanelDay = container.querySelector("[data-role='whale-panel-day']");
+    const hideStoryDialog = () => {
+        if (storyDialog) {
+            storyDialog.hidden = true;
+        }
+        document.body.classList.remove(STORY_MODAL_CLASS);
+    };
+    const openNextStoryEvent = () => {
+        if (!storyEnabled)
+            return;
+        const nextEvent = storyEventQueue.shift();
+        if (!nextEvent) {
+            activeStoryEvent = null;
+            hideStoryDialog();
+            return;
+        }
+        activeStoryEvent = nextEvent;
+        activeStoryLineIndex = 0;
+        storyLine && (storyLine.textContent = nextEvent.lines[0] ?? "");
+        if (storyDialog) {
+            storyDialog.hidden = false;
+        }
+        document.body.classList.add(STORY_MODAL_CLASS);
+    };
+    const advanceStoryLine = () => {
+        if (!activeStoryEvent) {
+            openNextStoryEvent();
+            return;
+        }
+        activeStoryLineIndex += 1;
+        if (activeStoryLineIndex < activeStoryEvent.lines.length) {
+            storyLine && (storyLine.textContent = activeStoryEvent.lines[activeStoryLineIndex]);
+            return;
+        }
+        activeStoryEvent = null;
+        openNextStoryEvent();
+    };
+    const queueStoryScenes = () => {
+        const scenes = runner.consumeStoryScenes();
+        if (!scenes.length)
+            return;
+        storyEventQueue.push(...scenes);
+        if (storyEnabled && !activeStoryEvent) {
+            openNextStoryEvent();
+        }
     };
     const metaPanel = metaPanelContainer
         ? initializeMetaPanel({
@@ -493,56 +735,6 @@ export const initializeUI = (runner, container, options = {}) => {
         if (!summaryChart)
             return;
         drawSparkline(summaryChart, summaryHistory.slice(-40));
-    };
-    const renderActiveArtifacts = () => {
-        if (!activeArtifactList)
-            return;
-        activeArtifactList.innerHTML = "";
-        if (runner.state.activeArtifacts.length === 0) {
-            const placeholder = document.createElement("li");
-            placeholder.className = "artifact-placeholder";
-            placeholder.textContent = "No active artifacts this run.";
-            activeArtifactList.appendChild(placeholder);
-            return;
-        }
-        for (const id of runner.state.activeArtifacts) {
-            const definition = findArtifactDefinition(id);
-            const entry = document.createElement("li");
-            entry.className = "artifact-entry";
-            entry.innerHTML = `
-        <strong>${definition?.name ?? id}</strong>
-        <p>${definition?.description ?? ""}</p>
-        <small>${definition?.rarity ?? ""}</small>
-      `;
-            activeArtifactList.appendChild(entry);
-        }
-    };
-    const renderArtifactRewardPanel = () => {
-        if (!artifactRewardPanel || !artifactRewardList)
-            return;
-        const pending = runner.state.pendingArtifactReward;
-        const hasChoices = pending && pending.length > 0;
-        artifactRewardPanel.hidden = !hasChoices;
-        artifactRewardList.innerHTML = "";
-        if (!hasChoices || !pending)
-            return;
-        for (const id of pending) {
-            const definition = findArtifactDefinition(id);
-            const entry = document.createElement("li");
-            entry.className = "artifact-reward-entry";
-            entry.innerHTML = `
-        <strong>${definition?.name ?? id}</strong>
-        <p>${definition?.description ?? ""}</p>
-        <small>${definition?.rarity ?? ""}</small>
-      `;
-            const claim = document.createElement("button");
-            claim.type = "button";
-            claim.dataset.action = "artifact-reward-claim";
-            claim.dataset.artifactId = id;
-            claim.textContent = "Claim";
-            entry.appendChild(claim);
-            artifactRewardList.appendChild(entry);
-        }
     };
     const renderCampaignPanel = () => {
         if (!campaignObjectiveEl || !campaignProgressList)
@@ -608,55 +800,6 @@ export const initializeUI = (runner, container, options = {}) => {
         </button>
       `;
             carryList.appendChild(entry);
-        }
-    };
-    const renderWhales = () => {
-        if (!whaleList)
-            return;
-        whaleList.innerHTML = "";
-        const visibleWhales = runner.state.activeWhales.filter((whale) => whale.visible);
-        if (visibleWhales.length === 0) {
-            const placeholder = document.createElement("li");
-            placeholder.className = "whale-card whale-card--placeholder";
-            placeholder.textContent =
-                "Whales remain hidden until your analyst perks reveal them.";
-            whaleList.appendChild(placeholder);
-            return;
-        }
-        for (const whale of visibleWhales) {
-            const profile = findWhaleProfile(whale.profileId);
-            const obsessionTargets = whale.obsession.slice(0, 3).join(", ");
-            const fallbackTargets = whale.targetSector ?? "Various sectors";
-            const targets = obsessionTargets || fallbackTargets;
-            const item = document.createElement("li");
-            item.className = "whale-card";
-            item.innerHTML = `
-        <strong>${profile?.displayName ?? "Unknown Whale"}</strong>
-        <p class="whale-card__style">${profile?.style ?? "Trader"}</p>
-        <p class="whale-card__targets">${targets || "Observing the market"}</p>
-      `;
-            whaleList.appendChild(item);
-        }
-    };
-    const renderWhaleLog = () => {
-        if (!whaleLog)
-            return;
-        whaleLog.innerHTML = "";
-        const combined = [
-            ...runner.state.whaleActionLog,
-            ...runner.state.bondActionLog,
-            ...runner.state.carryHistory.map((entry) => `(Carry) ${entry}`),
-            ...runner.state.devActionLog.map((entry) => `(Dev) ${entry}`),
-        ];
-        if (combined.length === 0) {
-            const placeholder = document.createElement("li");
-            placeholder.className = "whale-log__placeholder";
-            placeholder.textContent = "No visible whale activity yet.";
-            whaleLog.appendChild(placeholder);
-            return;
-        }
-        for (const entry of combined) {
-            whaleLog.appendChild(createListItem(entry));
         }
     };
     const renderLifecycleLog = () => {
@@ -997,6 +1140,97 @@ export const initializeUI = (runner, container, options = {}) => {
         const sign = value >= 0 ? "+" : "";
         return `${sign}${(value * 100).toFixed(2)}%`;
     };
+    const describeAggression = (profile) => {
+        const base = Math.abs(profile?.impactModel?.sectorTrendDelta ?? 0) +
+            Math.abs(profile?.impactModel?.companyTrendDelta ?? 0);
+        if (base >= 0.04)
+            return "High aggression";
+        if (base >= 0.02)
+            return "Medium aggression";
+        if (base > 0)
+            return "Low aggression";
+        return "Neutral stance";
+    };
+    const formatDaysAgo = (lastDay) => {
+        const diff = Math.max(0, runner.state.day - lastDay);
+        if (diff <= 0)
+            return "Active today";
+        if (diff === 1)
+            return "1 day ago";
+        return `${diff} days ago`;
+    };
+    const updateStoryGauge = () => {
+        if (!storyGaugeAct || !storyGaugeDay || !storyGaugeFill || !storyGaugeDesc)
+            return;
+        const total = runner.state.totalDays === Number.MAX_SAFE_INTEGER
+            ? runner.state.day + 1
+            : runner.state.totalDays;
+        const progress = total > 0 ? Math.min(runner.state.day / total, 1) : 0;
+        const actIndex = Math.min(STORY_ACTS.length - 1, Math.floor(progress * STORY_ACTS.length));
+        const act = STORY_ACTS[actIndex] ?? STORY_ACTS[0];
+        storyGaugeAct.textContent = act?.title ?? "Story Progress";
+        storyGaugeDesc.textContent = act?.description ?? "";
+        storyGaugeDay.textContent =
+            runner.state.totalDays === Number.MAX_SAFE_INTEGER
+                ? `Day ${runner.state.day}`
+                : `Day ${runner.state.day} / ${runner.state.totalDays}`;
+        storyGaugeFill.style.width = `${progress * 100}%`;
+    };
+    const getWhaleIconSymbol = (profile) => {
+        if (profile?.icon)
+            return profile.icon;
+        const name = profile?.displayName ?? "";
+        return name ? name.charAt(0) : "W";
+    };
+    const renderWhalePanel = () => {
+        if (!whalePanelList)
+            return;
+        if (whalePanelDay) {
+            whalePanelDay.textContent = `Day ${runner.state.day}`;
+        }
+        const whales = runner.state.activeWhales.filter((whale) => whale.visible);
+        if (whales.length === 0) {
+            whalePanelList.innerHTML =
+                '<p class="whale-panel__empty">No whales active yet.</p>';
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        for (const whale of whales) {
+            const profile = findWhaleProfile(whale.profileId);
+            const row = document.createElement("article");
+            row.className = "whale-panel__row";
+            const icon = document.createElement("span");
+            icon.className = `whale-panel__icon whale-hud__icon whale-hud__icon--${profile?.style ?? "default"}`;
+            icon.textContent = getWhaleIconSymbol(profile);
+            row.appendChild(icon);
+            const details = document.createElement("div");
+            details.className = "whale-panel__details";
+            const title = document.createElement("p");
+            title.className = "whale-panel__name";
+            title.textContent = profile?.displayName ?? "Unknown Whale";
+            details.appendChild(title);
+            const meta = document.createElement("p");
+            meta.className = "whale-panel__meta";
+            meta.textContent = `${describeAggression(profile)} · ${formatDaysAgo(whale.lastActionDay)}`;
+            details.appendChild(meta);
+            const hint = document.createElement("p");
+            hint.className = "whale-panel__hint";
+            hint.textContent =
+                profile?.description ??
+                    `Focus: ${profile?.favoriteSectors.join(", ") ?? "General market"}`;
+            details.appendChild(hint);
+            row.appendChild(details);
+            const capitalEl = document.createElement("div");
+            capitalEl.className = "whale-panel__capital";
+            capitalEl.textContent = whale.capital
+                ? formatCurrency(whale.capital)
+                : "Capital unknown";
+            row.appendChild(capitalEl);
+            fragment.appendChild(row);
+        }
+        whalePanelList.innerHTML = "";
+        whalePanelList.appendChild(fragment);
+    };
     const updateTickerTape = () => {
         if (!tickerStrip)
             return;
@@ -1004,14 +1238,13 @@ export const initializeUI = (runner, container, options = {}) => {
         const era = runner.state.eras[runner.state.currentEraIndex];
         const trendValue = era?.effects?.globalTrendBias ?? era?.effects?.global ?? 0;
         const holdingsCount = Object.values(runner.state.portfolio.holdings).filter((quantity) => quantity > 0).length;
-        const visibleWhales = runner.state.activeWhales.filter((whale) => whale.visible).length;
         const entries = [
+            `Portfolio ${formatCurrency(runner.getPortfolioValue())}`,
             `Cash ${formatCurrency(runner.state.portfolio.cash)} · Day ${runner.state.day}/${totalDaysLabel} · Era ${runner.currentEraName()}`,
             `Lvl ${currentMeta.level} · XP ${currentMeta.xp} · Best Final ${formatCurrency(currentMeta.bestFinalPortfolio)}`,
             `Trend ${formatPercent(trendValue)} · Vol ${runner.state.volatilityMultiplier.toFixed(2)}`,
             `Holdings ${holdingsCount} tickers · Debt ${formatCurrency(runner.state.portfolio.debt)}`,
-            `Triggers ${runner.state.watchOrders.length} · Whales ${visibleWhales}`,
-            `Artifacts ${runner.state.activeArtifacts.length}`,
+            `Triggers ${runner.state.watchOrders.length}`,
         ];
         const tapeText = entries.join(" · ");
         tickerStrip.innerHTML = `<span>${tapeText}&nbsp;</span><span>${tapeText}&nbsp;</span>`;
@@ -1354,6 +1587,7 @@ export const initializeUI = (runner, container, options = {}) => {
         currentMeta = runner.metaState;
         metaPanel?.refresh(currentMeta);
         updateTickerTape();
+        updateStoryGauge();
     };
     const refreshAll = () => {
         refreshSummary();
@@ -1368,17 +1602,75 @@ export const initializeUI = (runner, container, options = {}) => {
         refreshSelectedCompany();
         updateSliderValueDisplay();
         options.onSummaryUpdate?.(runner.summary());
-        renderActiveArtifacts();
-        renderArtifactRewardPanel();
         renderCampaignPanel();
         renderChallengePanel();
         renderBondMarket();
         renderBondHoldings();
-        renderWhales();
-        renderWhaleLog();
         renderLifecycleLog();
         renderCarryPanel();
+        refreshMiniGameCard();
         updateTickerTape();
+        const newsHeadlines = runner.consumeMarketNews();
+        if (newsHeadlines.length > 0) {
+            newsUI.appendHeadlines(newsHeadlines);
+            newsUI.updateTicker(newsHeadlines);
+        }
+        renderWhalePanel();
+        renderWhalePortrait(runner.state);
+        renderWhaleInfluenceBar(runner.state);
+        renderWhaleDialogue(runner.state);
+        queueStoryScenes();
+    };
+    const DEFAULT_MINI_GAME_TITLE = "Side Hustle";
+    const DEFAULT_MINI_GAME_SUBTITLE = "Side gigs drop in randomly—keep an eye on the board.";
+    const DEFAULT_MINI_GAME_STORY = "No gigs are active right now. Pause and listen to the neighborhood.";
+    const DEFAULT_MINI_GAME_BUTTON = "Watch the board";
+    const refreshMiniGameCard = () => {
+        const event = runner.state.pendingMiniGame;
+        const title = event ? event.title : DEFAULT_MINI_GAME_TITLE;
+        const subtitle = event ? event.subtitle : DEFAULT_MINI_GAME_SUBTITLE;
+        const story = event ? event.story : DEFAULT_MINI_GAME_STORY;
+        const buttonLabel = event ? event.prompt : DEFAULT_MINI_GAME_BUTTON;
+        if (miniGameTitle)
+            miniGameTitle.textContent = title;
+        if (miniGameSubtitle)
+            miniGameSubtitle.textContent = subtitle;
+        if (miniGameStory)
+            miniGameStory.textContent = story;
+        if (miniGameButton) {
+            miniGameButton.disabled = !event;
+            miniGameButton.textContent = buttonLabel;
+        }
+    };
+    const applyMiniGameReward = (event, result) => {
+        const normalized = Math.max(0, Math.min(1, result.score));
+        const rewardPct = 0.1 + normalized * 0.2;
+        const portfolioValue = runner.getPortfolioValue();
+        const rewardAmount = Math.max(1, Math.round(portfolioValue * rewardPct));
+        runner.state.portfolio.cash = Number((runner.state.portfolio.cash + rewardAmount).toFixed(2));
+        const lifecycleMessage = `${event.title} – ${result.story} You earn ${formatCurrency(rewardAmount)}.`;
+        recordLifecycleEvent(runner.state, lifecycleMessage);
+        refreshAll();
+    };
+    const startMiniGameFromEvent = (event) => {
+        const context = { title: event.title, subtitle: event.subtitle };
+        const handleResult = (result) => {
+            applyMiniGameReward(event, result);
+        };
+        switch (event.id) {
+            case "delivery":
+                launchDeliveryTimingMiniGame(handleResult, context);
+                break;
+            case "phone":
+                launchPhoneUnlockMiniGame(handleResult, context);
+                break;
+            case "garage":
+                launchGarageCleanoutMiniGame(handleResult, context);
+                break;
+        }
+    };
+    const startMiniGameFromType = (type) => {
+        startMiniGameFromEvent(createMiniGameEvent(type));
     };
     const placeTrade = (direction) => {
         if (!tradeTicker || !tradeSlider)
@@ -1447,20 +1739,36 @@ export const initializeUI = (runner, container, options = {}) => {
             closeWatchModal();
         }
     });
-    artifactRewardList?.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-action='artifact-reward-claim']");
-        if (!button)
+    miniGameButton?.addEventListener("click", () => {
+        const event = runner.state.pendingMiniGame;
+        if (!event)
             return;
-        const artifactId = button.dataset.artifactId;
-        if (!artifactId)
-            return;
-        runner.claimArtifactReward(artifactId);
+        runner.state.pendingMiniGame = null;
         refreshAll();
+        startMiniGameFromEvent(event);
     });
-    artifactRewardSkip?.addEventListener("click", () => {
-        runner.dismissArtifactReward();
-        renderArtifactRewardPanel();
+    storyContinueButton?.addEventListener("click", () => {
+        advanceStoryLine();
     });
+    storyToggleButton?.addEventListener("click", () => {
+        storyEnabled = !storyEnabled;
+        updateStoryToggleLabel();
+        if (!storyEnabled) {
+            hideStoryDialog();
+        }
+        else if (!activeStoryEvent) {
+            openNextStoryEvent();
+        }
+        if (window?.localStorage) {
+            try {
+                window.localStorage.setItem(STORY_TOGGLE_KEY, storyEnabled ? "1" : "0");
+            }
+            catch {
+                // ignore
+            }
+        }
+    });
+    updateStoryToggleLabel();
     carryList?.addEventListener("click", (event) => {
         const button = event.target.closest("[data-action='carry-choose']");
         if (!button)
@@ -1489,26 +1797,6 @@ export const initializeUI = (runner, container, options = {}) => {
             refreshAll();
         }
     });
-    devTriggerWhalesButton?.addEventListener("click", () => {
-        runner.triggerWhalePulse();
-        refreshAll();
-    });
-    devForceMutationButton?.addEventListener("click", () => {
-        runner.forceEraMutation();
-        refreshAll();
-    });
-    devRevealWhalesButton?.addEventListener("click", () => {
-        runner.revealAllWhales();
-        refreshAll();
-    });
-    devGrantArtifactButton?.addEventListener("click", () => {
-        runner.grantRandomArtifact();
-        refreshAll();
-    });
-    devArtifactRewardButton?.addEventListener("click", () => {
-        runner.triggerArtifactRewardNow();
-        refreshAll();
-    });
     devAwardXpSmallButton?.addEventListener("click", () => {
         runner.awardMetaXp(500);
         refreshAll();
@@ -1517,6 +1805,9 @@ export const initializeUI = (runner, container, options = {}) => {
         runner.awardMetaXp(2000);
         refreshAll();
     });
+    devOpenDeliveryButton?.addEventListener("click", () => startMiniGameFromType("delivery"));
+    devOpenPhoneButton?.addEventListener("click", () => startMiniGameFromType("phone"));
+    devOpenGarageButton?.addEventListener("click", () => startMiniGameFromType("garage"));
     devTriggerIpoButton?.addEventListener("click", () => {
         runner.triggerLifecycleIPO();
         refreshAll();
@@ -1527,6 +1818,14 @@ export const initializeUI = (runner, container, options = {}) => {
     });
     devTriggerBankruptcyButton?.addEventListener("click", () => {
         runner.triggerLifecycleBankruptcy();
+        refreshAll();
+    });
+    devResetXpButton?.addEventListener("click", () => {
+        runner.resetMetaXp();
+        refreshAll();
+    });
+    bindWhaleBuyoutHandler(() => {
+        runner.attemptWhaleBuyout();
         refreshAll();
     });
     refreshAll();

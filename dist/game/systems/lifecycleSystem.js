@@ -1,6 +1,6 @@
 import { CONFIG } from "../core/config.js";
 import { generateCompany } from "../generators/companyGen.js";
-const addLifecycleLog = (state, message) => {
+export const recordLifecycleEvent = (state, message) => {
     state.lifecycleLog.push(message);
     if (state.lifecycleLog.length > CONFIG.LIFECYCLE_LOG_LIMIT) {
         state.lifecycleLog.shift();
@@ -39,7 +39,7 @@ export const splitCompany = (state, company, ratio, options = {}) => {
     company.splitReferencePrice = newPrice;
     company.splitCount += 1;
     resetCompanyRange(company);
-    addLifecycleLog(state, `Stock split: ${company.ticker} ${ratio}-for-1 (${company.name}).`);
+    recordLifecycleEvent(state, `Stock split: ${company.ticker} ${ratio}-for-1 (${company.name}).`);
     return true;
 };
 export const bankruptCompany = (state, company, reason) => {
@@ -55,14 +55,14 @@ export const bankruptCompany = (state, company, reason) => {
     state.portfolio.holdings[company.ticker] = 0;
     clearWatchOrdersForCompany(state, company.id);
     const suffix = reason ? ` (${reason})` : "";
-    addLifecycleLog(state, `Bankruptcy: ${company.ticker} ${company.name} failed${suffix}.`);
+    recordLifecycleEvent(state, `Bankruptcy: ${company.ticker} ${company.name} failed${suffix}.`);
     return true;
 };
 export const spawnIPO = (state, rng, reason) => {
     const company = generateCompany(rng, state.sectors);
     state.companies.push(company);
     const suffix = reason ? ` after ${reason}` : "";
-    addLifecycleLog(state, `IPO: ${company.name} (${company.ticker}) lists${suffix}.`);
+    recordLifecycleEvent(state, `IPO: ${company.name} (${company.ticker}) lists${suffix}.`);
     return company;
 };
 export const processStockLifecycle = (state, rng) => {

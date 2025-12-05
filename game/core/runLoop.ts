@@ -20,6 +20,7 @@ import {
   recordCampaignRun,
   recordChallengeScore,
   setDifficulty,
+  resetXp,
 } from "./metaState.js";
 import { progressArtifact } from "../systems/metaProgress.js";
 import { aggregateArtifactEffects, type ArtifactEffects } from "./artifactEffects.js";
@@ -45,12 +46,31 @@ import {
 import {
   bankruptCompany,
   processStockLifecycle,
+  recordLifecycleEvent,
   spawnIPO,
   splitCompany,
 } from "../systems/lifecycleSystem.js";
 import { aggregateLegacyBuffEffects, mergeEffectDescriptors, pickLegacyBuff } from "../systems/legacyBuffSystem.js";
 import { campaignLibrary, findCampaign } from "../content/campaigns.js";
 import { findChallengeMode } from "../content/challengeModes.js";
+import {
+  createStoryRunnerState,
+  triggerStoryScenes,
+  buildSceneEvents,
+  createStoryContextSnapshot,
+  type StoryRunnerState,
+  type StorySceneEvent,
+} from "../../story/story-runner.js";
+import { StoryTrigger } from "../../story/story-flow.js";
+import { updateWhaleCapital } from "../systems/whaleCapitalSystem.js";
+import { emitMarketNews as enqueueMarketNews } from "../news/news-runner.js";
+import type { MarketNewsItem } from "../core/state.js";
+import {
+  applyWhaleBuyout,
+  applyWhaleCollapseIfNeeded,
+} from "../whales/whale-defeat.js";
+import { applyStorySceneEffects } from "../../story/story-effects.js";
+import { pickRandomMiniGameEvent } from "../minigames/eventLibrary.js";
 
 const ARTIFACT_UNLOCK_TIERS = [
   { value: 5_000, artifactId: "neon_compass" },
@@ -68,6 +88,10 @@ const ERA_MUTATIONS: Record<string, string[]> = {
   "optimism-cycle": ["bubble-euphoria"],
   "fear-cycle": ["liquidity-crunch"],
 };
+
+const MINI_GAME_BASE_CHANCE = 0.08;
+const MINI_GAME_MAX_CHANCE = 0.18;
+const MINI_GAME_LEVEL_BONUS = 0.005;
 
 export interface GameRunnerOptions {
   seed?: number;
@@ -92,6 +116,7 @@ export class GameRunner {
   private readonly artifactRewardMilestones = new Set<number>();
   private readonly rewardChoiceCount = 3;
   private startingArtifactGranted = false;
+  private storyRunner: StoryRunnerState;
 
   constructor(options: GameRunnerOptions = {}) {
     this.metaState = options.metaState ?? defaultMetaState;
@@ -121,6 +146,7 @@ export class GameRunner {
     });
 
     initializeWhales(this.state, this.rng);
+    this.storyRunner = createStoryRunnerState(this.state);
     initializeBondMarket(this.state, this.rng);
 
     this.applyCampaignModifiers();
@@ -135,6 +161,7 @@ export class GameRunner {
     }
 
     this.updateNextEraPrediction();
+    this.emitStoryCutscenes("start");
 
     saveRun(this.state);
     saveMeta(this.metaState);
@@ -162,9 +189,11 @@ export class GameRunner {
 
   private runDay(): void {
     if (this.state.runOver) return;
+    this.state.whaleDefeatedThisTick = false;
 
     this.maybeMutateCurrentEra();
     updateWhaleInfluence(this.state, this.rng, this.metaState);
+    this.emitStoryCutscenes("whale");
 
     const era = this.state.eras[this.state.currentEraIndex];
     const eventMultiplier = era?.effects?.eventFrequencyMultiplier ?? 1;
@@ -192,25 +221,35 @@ export class GameRunner {
 
   private completeDay(events: GameEvent[]): void {
     updatePrices(this.state, events, this.rng);
+    updateWhaleCapital(this.state);
     processStockLifecycle(this.state, this.rng);
     processWatchOrdersForDay(this.state);
     processBondsForDay(this.state, this.rng);
+    applyWhaleCollapseIfNeeded(this.state);
+    if (this.state.whaleCollapsedThisTick) {
+      this.emitStoryCutscenes("whale");
+      this.state.whaleCollapsedThisTick = false;
+    }
     const eraTransition = advanceEraProgress(this.state, this.rng, this.difficulty);
     if (eraTransition.eraChanged) {
       this.handleEraTransition(eraTransition.deckReset);
+      this.emitStoryCutscenes("era");
     }
     this.recordDailyStats();
+    this.emitStoryCutscenes("portfolio");
+    this.emitMarketNews();
+    this.emitStoryCutscenes("day");
     this.state.day += 1;
     this.checkArtifactUnlocks();
     this.maybeOfferArtifactReward();
+    this.maybeSpawnMiniGameEvent();
     saveRun(this.state);
     this.onSave?.(this.state);
+    this.state.whaleDefeatMode = null;
+    this.state.whaleCollapseReason = null;
 
-    if (
-      !this.difficulty.special?.noRunOver &&
-      this.state.day > this.state.totalDays
-    ) {
-      this.state.runOver = true;
+    if (this.state.runOver) {
+      this.emitStoryCutscenes("final");
     }
 
     if (this.state.runOver && !this.finalised) {
@@ -221,8 +260,21 @@ export class GameRunner {
   public triggerWhalePulse(): void {
     if (this.state.runOver) return;
     updateWhaleInfluence(this.state, this.rng, this.metaState);
+    this.emitStoryCutscenes("whale");
     saveRun(this.state);
     this.onSave?.(this.state);
+  }
+
+  public attemptWhaleBuyout(): boolean {
+    if (this.state.runOver) return false;
+    const success = applyWhaleBuyout(this.state);
+    if (!success) {
+      return false;
+    }
+    this.emitStoryCutscenes("whale");
+    saveRun(this.state);
+    this.onSave?.(this.state);
+    return true;
   }
 
   public forceEraMutation(): void {
@@ -307,6 +359,15 @@ export class GameRunner {
     saveMeta(this.metaState);
     this.notifyMetaChange();
     this.logDevAction(`Injected ${amount} XP.`);
+  }
+
+  public resetMetaXp(): void {
+    if (this.state.runOver) return;
+    this.metaState = resetXp(this.metaState);
+    this.refreshArtifactEffects();
+    saveMeta(this.metaState);
+    this.notifyMetaChange();
+    this.logDevAction("Meta XP reset to 0.");
   }
 
   public grantRandomArtifact(): void {
@@ -403,6 +464,52 @@ export class GameRunner {
     }
   }
 
+  public consumeStoryScenes(): StorySceneEvent[] {
+    const scenes = [...this.state.storySceneQueue];
+    this.state.storySceneQueue = [];
+    return scenes;
+  }
+
+  public consumeMarketNews(): MarketNewsItem[] {
+    const items = [...this.state.newsQueue];
+    this.state.newsQueue = [];
+    return items;
+  }
+
+  private emitStoryCutscenes(trigger: StoryTrigger): void {
+    const extras = {
+      level: this.metaState.level,
+      xp: this.metaState.xp,
+    };
+    const scenes = triggerStoryScenes(
+      this.storyRunner,
+      this.state,
+      trigger,
+      extras
+    );
+    if (scenes.length === 0) return;
+
+    applyStorySceneEffects(this.state, scenes);
+
+    const contextSnapshot = createStoryContextSnapshot(this.storyRunner);
+    const events = buildSceneEvents(scenes, this.state.day, contextSnapshot);
+    this.state.storySceneQueue.push(...events);
+
+    for (const scene of scenes) {
+      this.state.storyEventLog.push(`${scene.actId}:${scene.id}`);
+      if (this.state.storyEventLog.length > CONFIG.STORY_LOG_LIMIT) {
+        this.state.storyEventLog.shift();
+      }
+    }
+  }
+
+  private emitMarketNews(): MarketNewsItem[] {
+    const items = enqueueMarketNews(this.state);
+    this.state.recentNews = items;
+    this.state.newsDecisionUsed = false;
+    return items;
+  }
+
   private getLevelArtifactDescriptor(): ArtifactEffectDescriptor {
     const { level } = this.metaState;
     const descriptor: ArtifactEffectDescriptor = {};
@@ -491,6 +598,28 @@ export class GameRunner {
     this.state.pendingArtifactReward = options;
     this.artifactRewardMilestones.add(completedDay);
     this.state.artifactRewardHistory.push(completedDay);
+  }
+
+  private maybeSpawnMiniGameEvent(): void {
+    if (this.state.pendingMiniGame) return;
+    if (this.state.pendingChoice || this.state.pendingArtifactReward) return;
+    const currentDay = this.state.day;
+    if (currentDay <= this.state.lastMiniGameDay) return;
+    const chance =
+      Math.min(
+        MINI_GAME_MAX_CHANCE,
+        MINI_GAME_BASE_CHANCE + this.metaState.level * MINI_GAME_LEVEL_BONUS
+      );
+    if (this.rng.next() >= chance) {
+      return;
+    }
+    const event = pickRandomMiniGameEvent(() => this.rng.next());
+    this.state.pendingMiniGame = event;
+    this.state.lastMiniGameDay = currentDay;
+    recordLifecycleEvent(
+      this.state,
+      `Side hustle drops: ${event.title}. ${event.story}`
+    );
   }
 
   public claimArtifactReward(artifactId: string): void {

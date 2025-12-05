@@ -17,10 +17,19 @@ export interface WhaleProfile {
   displayName: string;
   style: string;
   description: string;
+  icon?: string;
   favoriteSectors: string[];
   triggers?: WhaleTrigger;
   impactModel: WhaleImpactModel;
   revealAtLevel?: number;
+  capitalConfig?: {
+    startingCapital?: number;
+    leverage?: number;
+    volatilitySensitivity?: number;
+    manipulationImpact?: number;
+    backfireFactor?: number;
+    sectorWeights?: Record<string, number>;
+  };
 }
 
 export interface WhaleInstance {
@@ -31,14 +40,25 @@ export interface WhaleInstance {
   visible: boolean;
   obsession: string[];
   lastActionDay: number;
+  capital: number;
+  capitalHistory: number[];
+  leverage: number;
+  sectorWeights: Record<string, number>;
 }
 
-const whaleDefinitions = whales as WhaleProfile[];
+const whaleDefinitions = whales as unknown as WhaleProfile[];
 
 export const whaleLibrary = whaleDefinitions;
 
 export const findWhaleProfile = (id: string): WhaleProfile | undefined =>
   whaleLibrary.find((whale) => whale.id === id);
+
+const resolveSectorWeights = (profileId: string): Record<string, number> => {
+  const profile = findWhaleProfile(profileId);
+  return profile?.capitalConfig?.sectorWeights
+    ? { ...profile.capitalConfig.sectorWeights }
+    : {};
+};
 
 export const createWhaleInstance = (profileId: string): WhaleInstance => ({
   id: crypto.randomUUID(),
@@ -48,6 +68,10 @@ export const createWhaleInstance = (profileId: string): WhaleInstance => ({
   visible: false,
   obsession: [],
   lastActionDay: 0,
+  capital: 0,
+  capitalHistory: [],
+  leverage: 1,
+  sectorWeights: resolveSectorWeights(profileId),
 });
 
 export const pickRandomWhaleProfiles = (

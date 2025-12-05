@@ -3,7 +3,7 @@ import type { GameState } from "../core/state.js";
 import { CONFIG } from "../core/config.js";
 import { generateCompany, type Company } from "../generators/companyGen.js";
 
-const addLifecycleLog = (state: GameState, message: string): void => {
+export const recordLifecycleEvent = (state: GameState, message: string): void => {
   state.lifecycleLog.push(message);
   if (state.lifecycleLog.length > CONFIG.LIFECYCLE_LOG_LIMIT) {
     state.lifecycleLog.shift();
@@ -52,7 +52,7 @@ export const splitCompany = (
   company.splitReferencePrice = newPrice;
   company.splitCount += 1;
   resetCompanyRange(company);
-  addLifecycleLog(
+  recordLifecycleEvent(
     state,
     `Stock split: ${company.ticker} ${ratio}-for-1 (${company.name}).`
   );
@@ -76,7 +76,7 @@ export const bankruptCompany = (
   state.portfolio.holdings[company.ticker] = 0;
   clearWatchOrdersForCompany(state, company.id);
   const suffix = reason ? ` (${reason})` : "";
-  addLifecycleLog(
+  recordLifecycleEvent(
     state,
     `Bankruptcy: ${company.ticker} ${company.name} failed${suffix}.`
   );
@@ -91,7 +91,7 @@ export const spawnIPO = (
   const company = generateCompany(rng, state.sectors);
   state.companies.push(company);
   const suffix = reason ? ` after ${reason}` : "";
-  addLifecycleLog(
+  recordLifecycleEvent(
     state,
     `IPO: ${company.name} (${company.ticker}) lists${suffix}.`
   );

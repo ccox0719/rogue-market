@@ -1,6 +1,7 @@
 import type { RNG } from "./rng.js";
 import { createSeededRng } from "./rng.js";
 import { CONFIG, getDifficultyMode, type DifficultyMode } from "./config.js";
+import type { StorySceneEvent } from "../../story/story-runner.js";
 import { aggregateArtifactEffects, type ArtifactEffects } from "./artifactEffects.js";
 import type { Company } from "../generators/companyGen.js";
 import { generateCompany } from "../generators/companyGen.js";
@@ -12,6 +13,9 @@ import type { GameEvent } from "../generators/eventGen.js";
 import type { IntradayRange } from "./intraday.js";
 import { type BondHolding, type BondMarketListing } from "../generators/bondGen.js";
 import type { WhaleInstance } from "../generators/whaleGen.js";
+import type { WhaleDialogueEvent } from "../whale-dialogue.js";
+import type { MiniGameEventDescriptor } from "../minigames/eventLibrary.js";
+export type { MiniGameEventDescriptor };
 
 export interface PlayerPortfolio {
   cash: number;
@@ -47,6 +51,16 @@ export interface CarryOption {
   payload?: string;
 }
 
+export type MarketNewsTopic = "whale" | "event" | "era";
+
+export interface MarketNewsItem {
+  id: string;
+  day: number;
+  topic: MarketNewsTopic;
+  headline: string;
+  lines: string[];
+}
+
 export interface GameState {
   day: number;
   totalDays: number;
@@ -66,6 +80,7 @@ export interface GameState {
   difficultyLabel: string;
   artifactEffects: ArtifactEffects;
   pendingChoice: GameEvent | null;
+  pendingMiniGame: MiniGameEventDescriptor | null;
   watchOrders: WatchOrder[];
   runStats: RunStats;
   activeArtifacts: string[];
@@ -85,10 +100,17 @@ export interface GameState {
   mutationMessage: string;
   eraDeckCycle: number;
   activeWhales: WhaleInstance[];
+  defeatedWhales: string[];
   whaleSectorBonuses: Record<string, number>;
   whaleCompanyBonuses: Record<string, number>;
   whaleActionLog: string[];
+  storyEventLog: string[];
+  storySceneQueue: StorySceneEvent[];
   devActionLog: string[];
+  newsEventLog: string[];
+  newsQueue: MarketNewsItem[];
+  recentNews: MarketNewsItem[];
+  whaleDialogueQueue: WhaleDialogueEvent[];
   bondHoldings: BondHolding[];
   bondMarket: BondMarketListing[];
   bondActionLog: string[];
@@ -99,6 +121,17 @@ export interface GameState {
   challengeId: string | null;
   pendingCarryChoices: CarryOption[] | null;
   carryHistory: string[];
+  lastMiniGameDay: number;
+  lastWhaleDefeatedId: string | null;
+  lastWhaleDefeatedDay: number;
+  whaleDefeatedThisTick: boolean;
+  storyBoonUsed: boolean;
+  whaleDefeatMode: "buyout" | "collapse" | null;
+  whaleCollapseReason: string | null;
+  whaleCollapsedThisTick: boolean;
+  newsDecisionUsed: boolean;
+  regulatorShots: number;
+  mediaCampaigns: number;
 }
 
 interface StateOptions {
@@ -187,10 +220,17 @@ export const createInitialState = (
     mutationMessage: "",
     eraDeckCycle: 0,
     activeWhales: [],
+    defeatedWhales: [],
     whaleSectorBonuses: {},
     whaleCompanyBonuses: {},
     whaleActionLog: [],
+    storyEventLog: [],
+    storySceneQueue: [],
     devActionLog: [],
+    newsEventLog: [],
+    newsQueue: [],
+    recentNews: [],
+    whaleDialogueQueue: [],
     bondHoldings: [],
     bondMarket: [],
     bondActionLog: [],
@@ -200,6 +240,18 @@ export const createInitialState = (
     campaignRunIndex: 1,
     challengeId: null,
     pendingCarryChoices: null,
+    pendingMiniGame: null,
+    lastMiniGameDay: 0,
     carryHistory: [],
+    lastWhaleDefeatedId: null,
+    lastWhaleDefeatedDay: 0,
+    whaleDefeatedThisTick: false,
+    storyBoonUsed: false,
+    newsDecisionUsed: false,
+    regulatorShots: 0,
+    mediaCampaigns: 0,
+    whaleDefeatMode: null,
+    whaleCollapseReason: null,
+    whaleCollapsedThisTick: false,
   };
 };

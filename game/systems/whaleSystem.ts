@@ -11,6 +11,48 @@ import {
 } from "../generators/whaleGen.js";
 import type { Company } from "../generators/companyGen.js";
 
+const normalizeWeights = (weights: Record<string, number>): Record<string, number> => {
+  const total = Object.values(weights).reduce((sum, value) => sum + Math.abs(value), 0);
+  if (total === 0) {
+    return {};
+  }
+  const normalized: Record<string, number> = {};
+  for (const [sector, weight] of Object.entries(weights)) {
+    normalized[sector] = weight / total;
+  }
+  return normalized;
+};
+
+const deriveWeightsFromFavorites = (favorites: string[]): Record<string, number> => {
+  if (favorites.length === 0) {
+    return {};
+  }
+  const per = 1 / favorites.length;
+  const weights: Record<string, number> = {};
+  for (const sector of favorites) {
+    weights[sector] = per;
+  }
+  return weights;
+};
+
+const configureWhaleCapital = (
+  instance: WhaleInstance,
+  profile: WhaleProfile
+): void => {
+  const config = profile.capitalConfig ?? {};
+  const startingCapital = config.startingCapital ?? 3_500_000;
+  const leverage = config.leverage ?? 1;
+  const weights =
+    config.sectorWeights && Object.keys(config.sectorWeights).length > 0
+      ? normalizeWeights(config.sectorWeights)
+      : deriveWeightsFromFavorites(profile.favoriteSectors);
+
+  instance.capital = startingCapital;
+  instance.capitalHistory = [startingCapital];
+  instance.leverage = leverage;
+  instance.sectorWeights = weights;
+};
+
 const pickSector = (profile: WhaleProfile, state: GameState, rng: RNG): string => {
   const sectorCandidates = profile.favoriteSectors.filter((sector) =>
     state.sectors.some((entry) => entry.name === sector)
@@ -70,7 +112,11 @@ export const initializeWhales = (state: GameState, rng: RNG): void => {
     return;
   }
   const profiles = pickRandomWhaleProfiles(CONFIG.WHALE_INITIAL_COUNT, rng);
-  state.activeWhales = profiles.map((profile) => createWhaleInstance(profile.id));
+  state.activeWhales = profiles.map((profile) => {
+    const instance = createWhaleInstance(profile.id);
+    configureWhaleCapital(instance, profile);
+    return instance;
+  });
 };
 
 export const updateWhaleInfluence = (

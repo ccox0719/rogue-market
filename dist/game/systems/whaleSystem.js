@@ -1,5 +1,39 @@
 import { CONFIG } from "../core/config.js";
 import { createWhaleInstance, findWhaleProfile, pickRandomWhaleProfiles, } from "../generators/whaleGen.js";
+const normalizeWeights = (weights) => {
+    const total = Object.values(weights).reduce((sum, value) => sum + Math.abs(value), 0);
+    if (total === 0) {
+        return {};
+    }
+    const normalized = {};
+    for (const [sector, weight] of Object.entries(weights)) {
+        normalized[sector] = weight / total;
+    }
+    return normalized;
+};
+const deriveWeightsFromFavorites = (favorites) => {
+    if (favorites.length === 0) {
+        return {};
+    }
+    const per = 1 / favorites.length;
+    const weights = {};
+    for (const sector of favorites) {
+        weights[sector] = per;
+    }
+    return weights;
+};
+const configureWhaleCapital = (instance, profile) => {
+    const config = profile.capitalConfig ?? {};
+    const startingCapital = config.startingCapital ?? 3500000;
+    const leverage = config.leverage ?? 1;
+    const weights = config.sectorWeights && Object.keys(config.sectorWeights).length > 0
+        ? normalizeWeights(config.sectorWeights)
+        : deriveWeightsFromFavorites(profile.favoriteSectors);
+    instance.capital = startingCapital;
+    instance.capitalHistory = [startingCapital];
+    instance.leverage = leverage;
+    instance.sectorWeights = weights;
+};
 const pickSector = (profile, state, rng) => {
     const sectorCandidates = profile.favoriteSectors.filter((sector) => state.sectors.some((entry) => entry.name === sector));
     if (sectorCandidates.length > 0) {
@@ -40,7 +74,11 @@ export const initializeWhales = (state, rng) => {
         return;
     }
     const profiles = pickRandomWhaleProfiles(CONFIG.WHALE_INITIAL_COUNT, rng);
-    state.activeWhales = profiles.map((profile) => createWhaleInstance(profile.id));
+    state.activeWhales = profiles.map((profile) => {
+        const instance = createWhaleInstance(profile.id);
+        configureWhaleCapital(instance, profile);
+        return instance;
+    });
 };
 export const updateWhaleInfluence = (state, rng, meta) => {
     if (state.activeWhales.length === 0) {

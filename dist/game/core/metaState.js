@@ -36,6 +36,11 @@ export const awardXp = (meta, amount) => {
     const level = calculateLevelFromXp(xp);
     return { ...meta, xp, level };
 };
+export const resetXp = (meta) => {
+    const xp = 0;
+    const level = calculateLevelFromXp(xp);
+    return { ...meta, xp, level };
+};
 export const unlockArtifact = (meta, artifactId) => {
     const artifacts = meta.artifacts.map((artifact) => artifact.id === artifactId ? { ...artifact, unlocked: true } : artifact);
     const unlockedArtifacts = meta.unlockedArtifacts.includes(artifactId)
