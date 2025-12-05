@@ -1,4 +1,4 @@
-import bondDefinitions from "../content/bonds.json";
+import bondDefinitions from "../content/bonds.js";
 const catalog = bondDefinitions;
 export const bondCatalog = catalog;
 export const findBondDefinition = (id) => catalog.find((entry) => entry.id === id);

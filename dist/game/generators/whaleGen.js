@@ -1,4 +1,4 @@
-import whales from "../content/whales.json";
+import whales from "../content/whales.js";
 const whaleDefinitions = whales;
 export const whaleLibrary = whaleDefinitions;
 export const findWhaleProfile = (id) => whaleLibrary.find((whale) => whale.id === id);
