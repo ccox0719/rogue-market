@@ -1,4 +1,4 @@
-import whales from "../content/whales.json";
+import whales from "../content/whales.js";
 import type { RNG } from "../core/rng.js";
 
 export interface WhaleTrigger {

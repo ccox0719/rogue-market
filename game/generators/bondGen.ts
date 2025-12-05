@@ -1,5 +1,5 @@
 import type { RNG } from "../core/rng.js";
-import bondDefinitions from "../content/bonds.json";
+import bondDefinitions from "../content/bonds.js";
 
 export type BondType = "gov" | "corp" | "junk";
 
