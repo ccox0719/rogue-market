@@ -29,6 +29,12 @@ import {
   recordReactiveMicrocapTrade,
 } from "../whales/reactiveMicrocap.js";
 import { localIncomeDefinitions } from "../systems/localIncomeSystem.js";
+import type { DCAStreamId } from "../simulation/dca.js";
+import {
+  DCA_STREAMS,
+  setActiveDCAStream,
+  setDCADailyContribution,
+} from "../simulation/dca.js";
 import { recordLifecycleEvent } from "../systems/lifecycleSystem.js";
 import { launchDeliveryTimingMiniGame } from "../minigames/deliveryTiming.js";
 import { launchPhoneUnlockMiniGame } from "../minigames/phoneUnlock.js";
@@ -183,7 +189,7 @@ export const initializeUI = (
                   </div>
                   <ul data-role="watch-list"></ul>
                 </div>
-                <div class="side-hustle-card">
+              <div class="side-hustle-card">
                   <div class="side-hustle-card__header">
                     <h3 data-role="side-hustle-title">Side Hustle</h3>
                     <p class="side-hustle-card__subtitle" data-role="side-hustle-subtitle">
@@ -205,13 +211,23 @@ export const initializeUI = (
                     </div>
                     <span class="local-income-panel__tag">DCA + Bonds</span>
                   </div>
-                  <div class="local-income-panel__streams" data-role="local-income-streams"></div>
+                  <div class="local-income-panel__active" data-role="dca-active"></div>
+                  <div class="local-income-panel__offers" data-role="dca-offers"></div>
                   <div class="local-income-panel__log">
                     <div class="local-income-panel__log-title">
                       <span>Recent events</span>
                       <small>rare and thematic</small>
                     </div>
-                    <ul data-role="local-income-event-list"></ul>
+                    <div class="local-income-panel__log-columns">
+                      <div class="local-income-panel__log-column">
+                        <h4>Macro streams</h4>
+                        <ul data-role="local-income-event-list"></ul>
+                      </div>
+                      <div class="local-income-panel__log-column">
+                        <h4>DCA events</h4>
+                        <ul data-role="dca-event-list"></ul>
+                      </div>
+                    </div>
                   </div>
                   <div class="bond-market-section">
                     <div class="bond-market-section__header">
@@ -737,8 +753,8 @@ export const initializeUI = (
   const reactiveMicrocapMarketCap = container.querySelector<HTMLElement>("[data-role='reactive-microcap-marketcap']");
   const reactiveMicrocapInfluence = container.querySelector<HTMLElement>("[data-role='reactive-microcap-influence']");
   const localIncomePanel = container.querySelector<HTMLElement>("[data-role='local-income-panel']");
-  const localIncomeStreams = container.querySelector<HTMLElement>("[data-role='local-income-streams']");
   const localIncomeEventList = container.querySelector<HTMLUListElement>("[data-role='local-income-event-list']");
+  const dcaEventList = container.querySelector<HTMLUListElement>("[data-role='dca-event-list']");
   const sideHustleModal = container.querySelector<HTMLElement>("[data-role='side-hustle-modal']");
   const sideHustleModalTitle = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-title']");
   const sideHustleModalSubtitle = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-subtitle']");
@@ -750,6 +766,8 @@ export const initializeUI = (
   const watchFeedback = container.querySelector<HTMLElement>("[data-role='watch-feedback']");
   const storyDialog = container.querySelector<HTMLElement>("[data-role='story-dialog']");
   const storyLine = container.querySelector<HTMLElement>("[data-role='story-line']");
+  const dcaOffersContainer = container.querySelector<HTMLElement>("[data-role='dca-offers']");
+  const dcaActiveInfo = container.querySelector<HTMLElement>("[data-role='dca-active']");
   const storyContinueButton = container.querySelector<HTMLButtonElement>(
     "[data-action='story-continue']"
   );
@@ -787,6 +805,9 @@ export const initializeUI = (
     "limit-sell": "#FF5252",
     "stop-loss": "#4FC3F7",
   };
+  const dcaStreamsList = Object.values(DCA_STREAMS);
+  const dcaStreamsByName = new Map(dcaStreamsList.map((stream) => [stream.name, stream]));
+  let lastOfferMessage = "";
   const storyToggleButton = container.querySelector<HTMLButtonElement>("[data-action='toggle-story']");
   const STORY_TOGGLE_KEY = "rogue-market-story-enabled";
   const readStoryPreference = (): boolean => {
@@ -1967,6 +1988,7 @@ export const initializeUI = (
     refreshMiniGameCard();
     refreshReactiveMicrocapCard();
     refreshLocalIncomePanel();
+    refreshDcaPanel();
     updateTickerTape();
     const newsHeadlines = runner.consumeMarketNews();
     if (newsHeadlines.length > 0) {
@@ -2027,78 +2049,172 @@ export const initializeUI = (
     }
   };
 
-  const refreshLocalIncomePanel = (): void => {
-    if (!localIncomePanel || !localIncomeStreams || !localIncomeEventList) {
-      return;
-    }
-
-    localIncomeStreams.innerHTML = "";
-    for (const definition of localIncomeDefinitions) {
-      const status = runner.state.localIncomeStreams[definition.id];
-      const activeEvent = status?.activeEvent;
-
-      const streamEntry = document.createElement("div");
-      streamEntry.className = "local-income-stream";
-      streamEntry.id = definition.id;
-
-      const streamHeader = document.createElement("div");
-      streamHeader.className = "local-income-stream__header";
-      streamHeader.innerHTML = `
-        <span class="local-income-stream__name">${definition.name}</span>
-        <span class="local-income-stream__risk local-income-stream__risk--${definition.riskTone}">
-          ${definition.riskLabel}
-        </span>
-      `;
-      streamEntry.appendChild(streamHeader);
-
-      const streamDescription = document.createElement("p");
-      streamDescription.className = "local-income-stream__description";
-      streamDescription.textContent = definition.description;
-      streamEntry.appendChild(streamDescription);
-
-      const stats = document.createElement("div");
-      stats.className = "local-income-stream__stats";
-      const incomeLabel = document.createElement("span");
-      incomeLabel.className = "local-income-stream__income";
-      incomeLabel.textContent = `Daily ${formatCurrency(definition.dailyIncome)}`;
-      stats.appendChild(incomeLabel);
-
-      const statusBadge = document.createElement("span");
-      statusBadge.className = "local-income-stream__status";
-      let statusText = "Steady";
-      if (activeEvent) {
-        const daysLeft = Math.max(0, activeEvent.remainingDays);
-        const suffix = daysLeft === 1 ? "day" : "days";
-        if (activeEvent.type === "no_payout") {
-          statusText = `Paused (${daysLeft} ${suffix} left)`;
-        } else {
-          const percent = Math.round((activeEvent.factor ?? 0) * 100);
-          statusText = `Reduced to ${percent}% for ${daysLeft} ${suffix}`;
-        }
-        statusBadge.classList.add("local-income-stream__status--alert");
+  const renderDcaActiveInfo = (): void => {
+    if (!dcaActiveInfo) return;
+    const state = runner.state.dca;
+    const stream = DCA_STREAMS[state.activeStreamId];
+    const yieldRate = (stream.incomeRatePerDay * 100).toFixed(2);
+    dcaActiveInfo.innerHTML = `
+      <strong>${stream.name}</strong>
+      <p>Daily contribution: $${state.dailyContribution} · Yield: ${yieldRate}%</p>
+      <p class="local-income-panel__active-desc">${stream.description}</p>
+      ${
+        lastOfferMessage
+          ? `<p class="local-income-panel__active-offer">${lastOfferMessage}</p>`
+          : ""
       }
-      statusBadge.textContent = statusText;
-      stats.appendChild(statusBadge);
-      streamEntry.appendChild(stats);
+    `;
+  };
 
+  const renderDcaOffers = (): void => {
+    if (!dcaOffersContainer) return;
+    const state = runner.state.dca;
+    dcaOffersContainer.innerHTML = "";
+    for (const definition of localIncomeDefinitions) {
+      const stream = dcaStreamsByName.get(definition.name);
+      if (!stream) continue;
+
+      const card = document.createElement("div");
+      card.className = "local-income-offer";
+      const isActive = state.activeStreamId === stream.id;
+      if (isActive) {
+        card.classList.add("local-income-offer--active");
+      }
+
+      const header = document.createElement("div");
+      header.className = "local-income-offer__header";
+      const riskBadge = document.createElement("span");
+      riskBadge.className = `local-income-stream__risk local-income-stream__risk--${definition.riskTone}`;
+      riskBadge.textContent = definition.riskLabel;
+      const statusBadge = document.createElement("span");
+      statusBadge.className = "local-income-offer__status-badge";
+      statusBadge.textContent = "Steady";
+      header.appendChild(riskBadge);
+      header.appendChild(statusBadge);
+      card.appendChild(header);
+
+      const title = document.createElement("h4");
+      title.textContent = stream.name;
+      card.appendChild(title);
+
+      const desc = document.createElement("p");
+      desc.className = "local-income-offer__description";
+      desc.textContent = definition.description;
+      card.appendChild(desc);
+
+      if (state.totalContributed > 0 && isActive) {
+        const poolInfo = document.createElement("p");
+        poolInfo.className = "local-income-offer__pool-info";
+        poolInfo.textContent = `Daily contribution: $${state.dailyContribution} · Yield: ${(stream.incomeRatePerDay * 100).toFixed(2)}%`;
+        card.appendChild(poolInfo);
+      }
+
+      const statsRow = document.createElement("div");
+      statsRow.className = "local-income-offer__stats";
+      const dailySpan = document.createElement("span");
+      dailySpan.textContent = `Daily ${formatCurrency(definition.dailyIncome)}`;
+      const tempoSpan = document.createElement("span");
+      tempoSpan.textContent = "Steady";
+      statsRow.appendChild(dailySpan);
+      statsRow.appendChild(tempoSpan);
+      card.appendChild(statsRow);
+
+      const rateLabel = document.createElement("p");
+      rateLabel.className = "local-income-offer__rate";
+      const yieldPct = (stream.incomeRatePerDay * 100).toFixed(2);
+      rateLabel.textContent = `Yield: ${yieldPct}% of contributions`;
+      card.appendChild(rateLabel);
+
+      const amountInput = document.createElement("input");
+      amountInput.type = "number";
+      amountInput.min = "0";
+      amountInput.step = "5";
+      amountInput.value = isActive ? String(state.dailyContribution) : "25";
+      amountInput.className = "local-income-offer__input";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "local-income-offer__action";
+      const updateButtonLabel = () => {
+        const value = Math.max(0, Number(amountInput.value) || 0);
+        button.textContent = `Invest $${value}/day`;
+      };
+      amountInput.addEventListener("input", updateButtonLabel);
+      updateButtonLabel();
+
+      button.addEventListener("click", () => {
+        const contribution = Math.max(0, Number(amountInput.value) || 0);
+        runner.state.dca = setActiveDCAStream(runner.state.dca, stream.id);
+        runner.state.dca = setDCADailyContribution(runner.state.dca, contribution);
+        lastOfferMessage = `You accepted ${stream.name} with $${contribution}/day.`;
+        refreshAll();
+      });
+
+      const inputRow = document.createElement("div");
+      inputRow.className = "local-income-offer__input-row";
+      inputRow.appendChild(amountInput);
+      inputRow.appendChild(button);
+      card.appendChild(inputRow);
+
+      const streamStatus = runner.state.localIncomeStreams[definition.id];
+      const activeEvent = streamStatus?.activeEvent;
       if (activeEvent) {
         const eventNote = document.createElement("p");
-        eventNote.className = "local-income-stream__event-note";
+        eventNote.className = "local-income-offer__event-note";
         eventNote.textContent = activeEvent.message;
-        streamEntry.appendChild(eventNote);
-      }
-      if (definition.id === "municipal-micro-bonds" && activeEvent) {
-        streamEntry.classList.add("local-income-stream--municipal-highlight");
+        card.appendChild(eventNote);
       }
 
-      localIncomeStreams.appendChild(streamEntry);
+      dcaOffersContainer.appendChild(card);
+    }
+  };
+
+  const renderDcaEventLog = (): void => {
+    if (!dcaEventList) return;
+    dcaEventList.innerHTML = "";
+    const entries = runner.state.dcaEventLog;
+    if (entries.length === 0) {
+      const placeholder = document.createElement("li");
+      placeholder.className = "local-income-panel__log-empty";
+      placeholder.textContent = "DCA updates appear here when something shifts.";
+      dcaEventList.appendChild(placeholder);
+      return;
+    }
+    for (const entry of entries) {
+      const row = document.createElement("li");
+      row.className = "local-income-panel__log-entry";
+      if (entry.kind === "bonus") {
+        row.classList.add("local-income-panel__log-entry--bonus");
+      } else if (entry.kind === "negative") {
+        row.classList.add("local-income-panel__log-entry--alert");
+      }
+      const deltaStr =
+        entry.cashDelta === 0
+          ? ""
+          : ` (${entry.cashDelta >= 0 ? "+" : "-"}${formatCurrency(
+              Math.abs(entry.cashDelta)
+            )})`;
+      row.innerHTML = `<span class="local-income-panel__log-day">${entry.label}</span><span>${entry.description}</span><span class="local-income-panel__log-cash">${deltaStr}</span>`;
+      dcaEventList.appendChild(row);
+    }
+  };
+
+  const refreshDcaPanel = (): void => {
+    renderDcaActiveInfo();
+    renderDcaOffers();
+    renderDcaEventLog();
+  };
+
+  const refreshLocalIncomePanel = (): void => {
+    if (!localIncomePanel || !localIncomeEventList) {
+      return;
     }
 
     localIncomeEventList.innerHTML = "";
     if (runner.state.localIncomeEventLog.length === 0) {
       const placeholder = document.createElement("li");
       placeholder.className = "local-income-panel__log-empty";
-      placeholder.textContent = "Nothing to report yet — streams remain steady.";
+      placeholder.textContent = "Nothing to report yet - streams remain steady.";
       localIncomeEventList.appendChild(placeholder);
     } else {
       for (const entry of runner.state.localIncomeEventLog) {
