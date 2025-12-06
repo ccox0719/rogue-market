@@ -44,6 +44,7 @@ import {
   refreshBondMarket,
 } from "../systems/bondSystem.js";
 import { processLocalIncomeStreams } from "../systems/localIncomeSystem.js";
+import { applyDCAForDay } from "../simulation/dca.js";
 import {
   bankruptCompany,
   processStockLifecycle,
@@ -93,6 +94,7 @@ const ERA_MUTATIONS: Record<string, string[]> = {
 const MINI_GAME_BASE_CHANCE = 0.08;
 const MINI_GAME_MAX_CHANCE = 0.18;
 const MINI_GAME_LEVEL_BONUS = 0.005;
+const DCA_EVENT_LOG_LIMIT = 8;
 
 export interface GameRunnerOptions {
   seed?: number;
@@ -227,6 +229,23 @@ export class GameRunner {
     processWatchOrdersForDay(this.state);
     processBondsForDay(this.state, this.rng);
     processLocalIncomeStreams(this.state, this.rng);
+    const { newState: dcaState, cashDelta: dcaCashDelta, events: dcaEvents } = applyDCAForDay(
+      this.state.dca,
+      this.state.day,
+      this.state.portfolio.cash,
+    );
+    this.state.dca = dcaState;
+    if (dcaCashDelta !== 0) {
+      this.state.portfolio.cash = Number((this.state.portfolio.cash + dcaCashDelta).toFixed(2));
+    }
+    if (dcaEvents.length > 0) {
+      for (const evt of dcaEvents) {
+        this.state.dcaEventLog.unshift(evt);
+        if (this.state.dcaEventLog.length > DCA_EVENT_LOG_LIMIT) {
+          this.state.dcaEventLog.length = DCA_EVENT_LOG_LIMIT;
+        }
+      }
+    }
     applyWhaleCollapseIfNeeded(this.state);
     if (this.state.whaleCollapsedThisTick) {
       this.emitStoryCutscenes("whale");

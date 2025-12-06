@@ -21,6 +21,7 @@ import {
   type LocalIncomeEventLogEntry,
   type LocalIncomeStreamStatus,
 } from "../systems/localIncomeSystem.js";
+import { createDefaultDCAState, type DCAEvent, type DCAState } from "../simulation/dca.js";
 export type { MiniGameEventDescriptor };
 
 export interface PlayerPortfolio {
@@ -116,6 +117,8 @@ export interface GameState {
   newsEventLog: string[];
   localIncomeStreams: Record<string, LocalIncomeStreamStatus>;
   localIncomeEventLog: LocalIncomeEventLogEntry[];
+  dca: DCAState;
+  dcaEventLog: DCAEvent[];
   newsQueue: MarketNewsItem[];
   recentNews: MarketNewsItem[];
   whaleDialogueQueue: WhaleDialogueEvent[];
@@ -239,6 +242,8 @@ export const createInitialState = (
     newsEventLog: [],
     localIncomeStreams: createInitialLocalIncomeStreams(),
     localIncomeEventLog: [],
+    dca: createDefaultDCAState(),
+    dcaEventLog: [],
     newsQueue: [],
     recentNews: [],
     whaleDialogueQueue: [],

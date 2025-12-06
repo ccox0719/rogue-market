@@ -73,12 +73,21 @@ export const initializeUI = (
   container.classList.add("app-shell");
   container.innerHTML = `
     <div class="view-shell">
-        <nav class="view-menu">
+        <nav class="view-menu view-menu--collapsed">
           <div class="view-menu__header">
             <span class="view-menu__title">Menu</span>
             <span class="view-menu__status">Run Dashboard</span>
+            <button
+              type="button"
+              class="view-menu__toggle"
+              data-action="toggle-view-menu"
+              aria-expanded="false"
+              aria-label="Toggle navigation menu"
+            >
+              ☰
+            </button>
           </div>
-          <div class="view-menu__list">
+          <div class="view-menu__list" data-role="view-menu-list">
             <button type="button" class="view-menu__item view-menu__item--active" data-view-target="dashboard">
               Run Dashboard
             </button>
@@ -737,6 +746,7 @@ export const initializeUI = (
   const sideHustleModalPrompt = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-prompt']");
   const sideHustleModalClose = container.querySelector<HTMLButtonElement>("[data-action='close-side-hustle-modal']");
   const sideHustleModalStart = container.querySelector<HTMLButtonElement>("[data-action='start-side-hustle']");
+  const sideHustleCard = container.querySelector<HTMLElement>(".side-hustle-card");
   const watchFeedback = container.querySelector<HTMLElement>("[data-role='watch-feedback']");
   const storyDialog = container.querySelector<HTMLElement>("[data-role='story-dialog']");
   const storyLine = container.querySelector<HTMLElement>("[data-role='story-line']");
@@ -843,6 +853,20 @@ export const initializeUI = (
     displaySideHustleModal(event);
   };
 
+  let sideHustleHighlightTimer: ReturnType<typeof setTimeout> | null = null;
+  const highlightSideHustleCard = (): void => {
+    if (!sideHustleCard) return;
+    sideHustleCard.classList.add("side-hustle-card--highlight");
+    sideHustleCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (sideHustleHighlightTimer) {
+      clearTimeout(sideHustleHighlightTimer);
+    }
+    sideHustleHighlightTimer = setTimeout(() => {
+      sideHustleCard.classList.remove("side-hustle-card--highlight");
+      sideHustleHighlightTimer = null;
+    }, 2000);
+  };
+
   const queueSideHustleModal = (event: PendingMiniGameEvent | null): void => {
     if (!event) {
       queuedSideHustleEvent = null;
@@ -855,6 +879,7 @@ export const initializeUI = (
     }
     queuedSideHustleEvent = event;
     sideHustleModalQueued = true;
+    highlightSideHustleCard();
   };
 
   newsUI.onClose(() => {
@@ -1865,10 +1890,25 @@ export const initializeUI = (
     button.addEventListener("click", () => togglePanelBody(button));
   });
 
+  const viewMenu = container.querySelector<HTMLElement>(".view-menu");
   const viewMenuStatus = container.querySelector<HTMLElement>(".view-menu__status");
   const viewButtons = Array.from(
     container.querySelectorAll<HTMLButtonElement>("[data-view-target]")
   );
+  const viewMenuToggle = container.querySelector<HTMLButtonElement>(
+    "[data-action='toggle-view-menu']"
+  );
+  const viewMenuList = container.querySelector<HTMLElement>("[data-role='view-menu-list']");
+  let menuOpen = false;
+
+  const setMenuVisible = (visible: boolean): void => {
+    menuOpen = visible;
+    viewMenu?.classList.toggle("view-menu--collapsed", !menuOpen);
+    viewMenuList?.classList.toggle("view-menu__list--open", menuOpen);
+    if (viewMenuToggle) {
+      viewMenuToggle.setAttribute("aria-expanded", String(menuOpen));
+    }
+  };
   const viewPages = Array.from(container.querySelectorAll<HTMLElement>(".view-page"));
   const setActiveView = (viewId: string) => {
     const target = viewId || "dashboard";
@@ -1886,12 +1926,15 @@ export const initializeUI = (
       const label = activeButton?.textContent?.trim() ?? target;
       viewMenuStatus.textContent = label;
     }
-    // keep menu always visible now
+    setMenuVisible(false);
   };
   viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
       setActiveView(button.dataset.viewTarget ?? "dashboard");
     });
+  });
+  viewMenuToggle?.addEventListener("click", () => {
+    setMenuVisible(!menuOpen);
   });
   setActiveView("dashboard");
 

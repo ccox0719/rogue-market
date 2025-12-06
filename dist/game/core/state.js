@@ -5,6 +5,7 @@ import { generateCompany } from "../generators/companyGen.js";
 import { generateEraDeck } from "../generators/eraGen.js";
 import { generateSectors } from "../generators/sectorGen.js";
 import { createInitialLocalIncomeStreams, } from "../systems/localIncomeSystem.js";
+import { createDefaultDCAState } from "../simulation/dca.js";
 export const createInitialState = (seed, providedRng, options = {}) => {
     const runSeed = seed ?? Date.now();
     const rng = providedRng ?? createSeededRng(runSeed);
@@ -83,6 +84,8 @@ export const createInitialState = (seed, providedRng, options = {}) => {
         newsEventLog: [],
         localIncomeStreams: createInitialLocalIncomeStreams(),
         localIncomeEventLog: [],
+        dca: createDefaultDCAState(),
+        dcaEventLog: [],
         newsQueue: [],
         recentNews: [],
         whaleDialogueQueue: [],
