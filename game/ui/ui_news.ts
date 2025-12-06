@@ -3,6 +3,8 @@ import type { MarketNewsItem } from "../core/state.js";
 interface NewsUIController {
   appendHeadlines(headlines: MarketNewsItem[]): void;
   updateTicker(headlines: MarketNewsItem[]): void;
+  onClose(listener: () => void): () => void;
+  isOpen(): boolean;
 }
 
 const MAX_DISPLAY_HEADLINES = 5;
@@ -35,11 +37,20 @@ export const initializeNewsUI = (container: HTMLElement): NewsUIController => {
   const openButton = container.querySelector<HTMLButtonElement>("[data-action='open-news-modal']");
   const closeButton = container.querySelector<HTMLButtonElement>("[data-action='close-news-modal']");
   const tickerEl = container.querySelector<HTMLElement>("[data-role='news-ticker-inner']");
+  const closeListeners = new Set<() => void>();
+  let isOpen = false;
 
-  const toggleModal = (visible: boolean): void => {
+  const setModalVisibility = (visible: boolean): void => {
     if (!modal) return;
     modal.hidden = !visible;
     modal.classList.toggle("news-modal--open", visible);
+    isOpen = visible;
+  };
+
+  const closeModal = (): void => {
+    if (!isOpen) return;
+    setModalVisibility(false);
+    closeListeners.forEach((listener) => listener());
   };
 
   const ensurePlaceholder = (): void => {
@@ -54,12 +65,12 @@ export const initializeNewsUI = (container: HTMLElement): NewsUIController => {
 
   openButton?.addEventListener("click", () => {
     ensurePlaceholder();
-    toggleModal(true);
+    setModalVisibility(true);
   });
-  closeButton?.addEventListener("click", () => toggleModal(false));
+  closeButton?.addEventListener("click", () => closeModal());
   modal?.addEventListener("click", (event) => {
     if (event.target === modal) {
-      toggleModal(false);
+      closeModal();
     }
   });
 
@@ -103,7 +114,7 @@ export const initializeNewsUI = (container: HTMLElement): NewsUIController => {
     modalBody.appendChild(fragment);
     trimModalRows(modalBody);
     modalBody.scrollTop = modalBody.scrollHeight;
-    toggleModal(true);
+    setModalVisibility(true);
   };
 
   const updateTicker = (headlines: MarketNewsItem[]): void => {
@@ -120,5 +131,12 @@ export const initializeNewsUI = (container: HTMLElement): NewsUIController => {
   return {
     appendHeadlines,
     updateTicker,
+    onClose(listener: () => void) {
+      closeListeners.add(listener);
+      return () => closeListeners.delete(listener);
+    },
+    isOpen() {
+      return isOpen;
+    },
   };
 };

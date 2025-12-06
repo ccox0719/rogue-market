@@ -12,6 +12,8 @@ import { renderWhaleDialogue } from "./whale-dialogue-ui.js";
 import { renderWhalePortrait } from "./whale-portrait-ui.js";
 import { CONFIG } from "../core/config.js";
 import { buyBondFromListing } from "../systems/bondSystem.js";
+import { findReactiveMicrocapCompany, recordReactiveMicrocapTrade, } from "../whales/reactiveMicrocap.js";
+import { localIncomeDefinitions } from "../systems/localIncomeSystem.js";
 import { recordLifecycleEvent } from "../systems/lifecycleSystem.js";
 import { launchDeliveryTimingMiniGame } from "../minigames/deliveryTiming.js";
 import { launchPhoneUnlockMiniGame } from "../minigames/phoneUnlock.js";
@@ -27,22 +29,28 @@ export const initializeUI = (runner, container, options = {}) => {
     container.innerHTML = `
     <div class="view-shell">
         <nav class="view-menu">
-          <button type="button" class="view-menu__item view-menu__item--active" data-view-target="dashboard">
-            Run Dashboard
-          </button>
-        <button type="button" class="view-menu__item" data-view-target="progression">
-          Progression
-        </button>
-        <button type="button" class="view-menu__item" data-view-target="market">
-          Market Info
-        </button>
-        <button type="button" class="view-menu__item" data-view-target="whales">
-          Whales
-        </button>
-        <button type="button" class="view-menu__item" data-view-target="dev">
-          Dev Tools
-        </button>
-      </nav>
+          <div class="view-menu__header">
+            <span class="view-menu__title">Menu</span>
+            <span class="view-menu__status">Run Dashboard</span>
+          </div>
+          <div class="view-menu__list">
+            <button type="button" class="view-menu__item view-menu__item--active" data-view-target="dashboard">
+              Run Dashboard
+            </button>
+            <button type="button" class="view-menu__item" data-view-target="progression">
+              Progression
+            </button>
+            <button type="button" class="view-menu__item" data-view-target="market">
+              Market Info
+            </button>
+            <button type="button" class="view-menu__item" data-view-target="whales">
+              Whales
+            </button>
+            <button type="button" class="view-menu__item" data-view-target="dev">
+              Dev Tools
+            </button>
+          </div>
+        </nav>
       <div class="view-stack">
         <article class="view-page view-page--active" data-view="dashboard">
           <div class="ticker-tape" data-role="ticker-tape">
@@ -103,6 +111,16 @@ export const initializeUI = (runner, container, options = {}) => {
                   </div>
                 </form>
                 <p class="feedback" data-role="trade-feedback"></p>
+                <div class="trade-card__microcap reactive-microcap-card" data-role="reactive-microcap-card" hidden>
+                  <div class="reactive-microcap-card__header">
+                    <span>Reactive Micro-Cap Discovered</span>
+                    <span class="reactive-microcap-card__tag">Highly Reactive</span>
+                  </div>
+                  <p class="reactive-microcap-card__ticker" data-role="reactive-microcap-ticker"></p>
+                  <p class="reactive-microcap-card__name" data-role="reactive-microcap-name"></p>
+                  <p class="reactive-microcap-card__description" data-role="reactive-microcap-description"></p>
+                  <p class="reactive-microcap-card__marketcap" data-role="reactive-microcap-marketcap"></p>
+                </div>
               </div>
                 <div class="trigger-card">
                   <div class="trigger-card__header">
@@ -125,21 +143,39 @@ export const initializeUI = (runner, container, options = {}) => {
                     Watch the board
                   </button>
                 </div>
-                <div class="bond-market-section">
-                <div class="bond-market-section__header">
-                  <h3>Bond Market</h3>
-                </div>
-                <div class="bond-market-grid">
-                  <div class="bond-market__list">
-                    <h4>Available Bonds</h4>
-                    <ul data-role="bond-market-list"></ul>
+                <div class="local-income-panel" data-role="local-income-panel">
+                  <div class="local-income-panel__header">
+                    <div>
+                      <h3>Community Income Hub</h3>
+                      <p>Blend steadier neighborhood cash with nearby bonds.</p>
+                    </div>
+                    <span class="local-income-panel__tag">DCA + Bonds</span>
                   </div>
-                  <div class="bond-market__holdings">
-                    <h4>Your Holdings</h4>
-                    <ul data-role="bond-holdings-list"></ul>
+                  <div class="local-income-panel__streams" data-role="local-income-streams"></div>
+                  <div class="local-income-panel__log">
+                    <div class="local-income-panel__log-title">
+                      <span>Recent events</span>
+                      <small>rare and thematic</small>
+                    </div>
+                    <ul data-role="local-income-event-list"></ul>
+                  </div>
+                  <div class="bond-market-section">
+                    <div class="bond-market-section__header">
+                      <h3>Bond Tenders</h3>
+                      <p>Short-duration issues anchor the broader income mix.</p>
+                    </div>
+                    <div class="bond-market-grid">
+                      <div class="bond-market__list">
+                        <h4>Available Bonds</h4>
+                        <ul data-role="bond-market-list"></ul>
+                      </div>
+                      <div class="bond-market__holdings">
+                        <h4>Your Holdings</h4>
+                        <ul data-role="bond-holdings-list"></ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           </section>
         </article>
@@ -556,6 +592,21 @@ export const initializeUI = (runner, container, options = {}) => {
         <div class="news-modal__body" data-role="news-modal-body"></div>
       </div>
     </div>
+    <div class="side-hustle-modal" data-role="side-hustle-modal" hidden>
+      <div class="side-hustle-modal__dialog">
+        <header class="side-hustle-modal__header">
+          <span>Side Hustle</span>
+          <button type="button" class="side-hustle-modal__close" data-action="close-side-hustle-modal" aria-label="Close side hustle modal">Close</button>
+        </header>
+        <div class="side-hustle-modal__body">
+          <h3 data-role="side-hustle-modal-title"></h3>
+          <p class="side-hustle-modal__subtitle" data-role="side-hustle-modal-subtitle"></p>
+          <p class="side-hustle-modal__story" data-role="side-hustle-modal-story"></p>
+          <p class="side-hustle-modal__prompt" data-role="side-hustle-modal-prompt"></p>
+          <button type="button" class="side-hustle-modal__action" data-action="start-side-hustle">Start gig</button>
+        </div>
+      </div>
+    </div>
     <div class="news-ticker" data-role="news-ticker">
       <button type="button" class="news-ticker__launch" data-action="open-news-modal">News</button>
       <div class="news-ticker__inner" data-role="news-ticker-inner"></div>
@@ -616,6 +667,22 @@ export const initializeUI = (runner, container, options = {}) => {
     const miniGameSubtitle = container.querySelector("[data-role='side-hustle-subtitle']");
     const miniGameStory = container.querySelector("[data-role='side-hustle-story']");
     const miniGameButton = container.querySelector("[data-action='start-mini-game']");
+    const reactiveMicrocapCard = container.querySelector("[data-role='reactive-microcap-card']");
+    const reactiveMicrocapTicker = container.querySelector("[data-role='reactive-microcap-ticker']");
+    const reactiveMicrocapName = container.querySelector("[data-role='reactive-microcap-name']");
+    const reactiveMicrocapDescription = container.querySelector("[data-role='reactive-microcap-description']");
+    const reactiveMicrocapMarketCap = container.querySelector("[data-role='reactive-microcap-marketcap']");
+    const reactiveMicrocapInfluence = container.querySelector("[data-role='reactive-microcap-influence']");
+    const localIncomePanel = container.querySelector("[data-role='local-income-panel']");
+    const localIncomeStreams = container.querySelector("[data-role='local-income-streams']");
+    const localIncomeEventList = container.querySelector("[data-role='local-income-event-list']");
+    const sideHustleModal = container.querySelector("[data-role='side-hustle-modal']");
+    const sideHustleModalTitle = container.querySelector("[data-role='side-hustle-modal-title']");
+    const sideHustleModalSubtitle = container.querySelector("[data-role='side-hustle-modal-subtitle']");
+    const sideHustleModalStory = container.querySelector("[data-role='side-hustle-modal-story']");
+    const sideHustleModalPrompt = container.querySelector("[data-role='side-hustle-modal-prompt']");
+    const sideHustleModalClose = container.querySelector("[data-action='close-side-hustle-modal']");
+    const sideHustleModalStart = container.querySelector("[data-action='start-side-hustle']");
     const watchFeedback = container.querySelector("[data-role='watch-feedback']");
     const storyDialog = container.querySelector("[data-role='story-dialog']");
     const storyLine = container.querySelector("[data-role='story-line']");
@@ -647,6 +714,7 @@ export const initializeUI = (runner, container, options = {}) => {
     const STORY_MODAL_CLASS = "story-modal-open";
     let currentMeta = options.metaState ?? runner.metaState;
     let selectedTicker = undefined;
+    let lastReactiveMicrocapTicker = null;
     const summaryHistory = [];
     const WATCH_ORDER_COLORS = {
         "limit-buy": "#00C853",
@@ -678,6 +746,69 @@ export const initializeUI = (runner, container, options = {}) => {
         storyToggleButton.classList.toggle("story-toggle--disabled", !storyEnabled);
     };
     const newsUI = initializeNewsUI(container);
+    const SIDE_HUSTLE_MODAL_OPEN_CLASS = "side-hustle-modal--open";
+    let queuedSideHustleEvent = null;
+    let sideHustleModalShownEvent = null;
+    let sideHustleModalQueued = false;
+    let sideHustleModalVisible = false;
+    const updateSideHustleModalContent = (event) => {
+        if (sideHustleModalTitle)
+            sideHustleModalTitle.textContent = event.title;
+        if (sideHustleModalSubtitle)
+            sideHustleModalSubtitle.textContent = event.subtitle;
+        if (sideHustleModalStory)
+            sideHustleModalStory.textContent = event.story;
+        if (sideHustleModalPrompt)
+            sideHustleModalPrompt.textContent = event.prompt;
+    };
+    const closeSideHustleModal = () => {
+        if (!sideHustleModalVisible || !sideHustleModal)
+            return;
+        sideHustleModal.hidden = true;
+        sideHustleModal.classList.remove(SIDE_HUSTLE_MODAL_OPEN_CLASS);
+        sideHustleModalVisible = false;
+    };
+    const displaySideHustleModal = (event) => {
+        if (!sideHustleModal)
+            return;
+        updateSideHustleModalContent(event);
+        sideHustleModal.hidden = false;
+        sideHustleModal.classList.add(SIDE_HUSTLE_MODAL_OPEN_CLASS);
+        sideHustleModalVisible = true;
+        sideHustleModalQueued = false;
+        sideHustleModalShownEvent = event;
+    };
+    const maybeOpenSideHustleModal = (options = {}) => {
+        const event = queuedSideHustleEvent;
+        if (!event)
+            return;
+        if (!options.force && sideHustleModalShownEvent === event) {
+            return;
+        }
+        if (!options.force && newsUI.isOpen()) {
+            sideHustleModalQueued = true;
+            return;
+        }
+        displaySideHustleModal(event);
+    };
+    const queueSideHustleModal = (event) => {
+        if (!event) {
+            queuedSideHustleEvent = null;
+            sideHustleModalQueued = false;
+            sideHustleModalShownEvent = null;
+            return;
+        }
+        if (queuedSideHustleEvent === event) {
+            return;
+        }
+        queuedSideHustleEvent = event;
+        sideHustleModalQueued = true;
+    };
+    newsUI.onClose(() => {
+        if (sideHustleModalQueued) {
+            maybeOpenSideHustleModal();
+        }
+    });
     const whalePanelList = container.querySelector("[data-role='whale-panel-list']");
     const whalePanelDay = container.querySelector("[data-role='whale-panel-day']");
     const hideStoryDialog = () => {
@@ -1546,6 +1677,14 @@ export const initializeUI = (runner, container, options = {}) => {
         refreshSelectedCompany();
         refreshHoldings();
     };
+    const focusReactiveMicrocapTicker = (ticker) => {
+        if (!tradeTicker)
+            return;
+        if (tradeTicker.value === ticker && selectedTicker === ticker)
+            return;
+        tradeTicker.value = ticker;
+        updateSelectionFromDropdown();
+    };
     const togglePanelBody = (button) => {
         const section = button.closest("section");
         if (!section)
@@ -1566,6 +1705,7 @@ export const initializeUI = (runner, container, options = {}) => {
     panelToggles.forEach((button) => {
         button.addEventListener("click", () => togglePanelBody(button));
     });
+    const viewMenuStatus = container.querySelector(".view-menu__status");
     const viewButtons = Array.from(container.querySelectorAll("[data-view-target]"));
     const viewPages = Array.from(container.querySelectorAll(".view-page"));
     const setActiveView = (viewId) => {
@@ -1576,6 +1716,12 @@ export const initializeUI = (runner, container, options = {}) => {
         viewPages.forEach((page) => {
             page.classList.toggle("view-page--active", page.dataset.view === target);
         });
+        const activeButton = viewButtons.find((button) => button.dataset.viewTarget === target);
+        if (viewMenuStatus) {
+            const label = activeButton?.textContent?.trim() ?? target;
+            viewMenuStatus.textContent = label;
+        }
+        // keep menu always visible now
     };
     viewButtons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -1609,12 +1755,15 @@ export const initializeUI = (runner, container, options = {}) => {
         renderLifecycleLog();
         renderCarryPanel();
         refreshMiniGameCard();
+        refreshReactiveMicrocapCard();
+        refreshLocalIncomePanel();
         updateTickerTape();
         const newsHeadlines = runner.consumeMarketNews();
         if (newsHeadlines.length > 0) {
             newsUI.appendHeadlines(newsHeadlines);
             newsUI.updateTicker(newsHeadlines);
         }
+        maybeOpenSideHustleModal();
         renderWhalePanel();
         renderWhalePortrait(runner.state);
         renderWhaleInfluenceBar(runner.state);
@@ -1640,6 +1789,106 @@ export const initializeUI = (runner, container, options = {}) => {
         if (miniGameButton) {
             miniGameButton.disabled = !event;
             miniGameButton.textContent = buttonLabel;
+        }
+        queueSideHustleModal(event);
+    };
+    const refreshReactiveMicrocapCard = () => {
+        if (!reactiveMicrocapCard)
+            return;
+        const company = findReactiveMicrocapCompany(runner.state);
+        if (!company || !company.reactiveDetails) {
+            reactiveMicrocapCard.hidden = true;
+            lastReactiveMicrocapTicker = null;
+            return;
+        }
+        const details = company.reactiveDetails;
+        reactiveMicrocapCard.hidden = false;
+        reactiveMicrocapTicker && (reactiveMicrocapTicker.textContent = company.ticker);
+        reactiveMicrocapName && (reactiveMicrocapName.textContent = company.name);
+        reactiveMicrocapDescription && (reactiveMicrocapDescription.textContent = details.description);
+        reactiveMicrocapMarketCap &&
+            (reactiveMicrocapMarketCap.textContent = `Market Cap ${formatCurrency(details.marketCap)}`);
+        reactiveMicrocapInfluence &&
+            (reactiveMicrocapInfluence.textContent = `Influence +${details.lastInfluenceGain}`);
+        if (company.ticker !== lastReactiveMicrocapTicker) {
+            lastReactiveMicrocapTicker = company.ticker;
+            focusReactiveMicrocapTicker(company.ticker);
+        }
+    };
+    const refreshLocalIncomePanel = () => {
+        if (!localIncomePanel || !localIncomeStreams || !localIncomeEventList) {
+            return;
+        }
+        localIncomeStreams.innerHTML = "";
+        for (const definition of localIncomeDefinitions) {
+            const status = runner.state.localIncomeStreams[definition.id];
+            const activeEvent = status?.activeEvent;
+            const streamEntry = document.createElement("div");
+            streamEntry.className = "local-income-stream";
+            streamEntry.id = definition.id;
+            const streamHeader = document.createElement("div");
+            streamHeader.className = "local-income-stream__header";
+            streamHeader.innerHTML = `
+        <span class="local-income-stream__name">${definition.name}</span>
+        <span class="local-income-stream__risk local-income-stream__risk--${definition.riskTone}">
+          ${definition.riskLabel}
+        </span>
+      `;
+            streamEntry.appendChild(streamHeader);
+            const streamDescription = document.createElement("p");
+            streamDescription.className = "local-income-stream__description";
+            streamDescription.textContent = definition.description;
+            streamEntry.appendChild(streamDescription);
+            const stats = document.createElement("div");
+            stats.className = "local-income-stream__stats";
+            const incomeLabel = document.createElement("span");
+            incomeLabel.className = "local-income-stream__income";
+            incomeLabel.textContent = `Daily ${formatCurrency(definition.dailyIncome)}`;
+            stats.appendChild(incomeLabel);
+            const statusBadge = document.createElement("span");
+            statusBadge.className = "local-income-stream__status";
+            let statusText = "Steady";
+            if (activeEvent) {
+                const daysLeft = Math.max(0, activeEvent.remainingDays);
+                const suffix = daysLeft === 1 ? "day" : "days";
+                if (activeEvent.type === "no_payout") {
+                    statusText = `Paused (${daysLeft} ${suffix} left)`;
+                }
+                else {
+                    const percent = Math.round((activeEvent.factor ?? 0) * 100);
+                    statusText = `Reduced to ${percent}% for ${daysLeft} ${suffix}`;
+                }
+                statusBadge.classList.add("local-income-stream__status--alert");
+            }
+            statusBadge.textContent = statusText;
+            stats.appendChild(statusBadge);
+            streamEntry.appendChild(stats);
+            if (activeEvent) {
+                const eventNote = document.createElement("p");
+                eventNote.className = "local-income-stream__event-note";
+                eventNote.textContent = activeEvent.message;
+                streamEntry.appendChild(eventNote);
+            }
+            if (definition.id === "municipal-micro-bonds" && activeEvent) {
+                streamEntry.classList.add("local-income-stream--municipal-highlight");
+            }
+            localIncomeStreams.appendChild(streamEntry);
+        }
+        localIncomeEventList.innerHTML = "";
+        if (runner.state.localIncomeEventLog.length === 0) {
+            const placeholder = document.createElement("li");
+            placeholder.className = "local-income-panel__log-empty";
+            placeholder.textContent = "Nothing to report yet — streams remain steady.";
+            localIncomeEventList.appendChild(placeholder);
+        }
+        else {
+            for (const entry of runner.state.localIncomeEventLog) {
+                const row = document.createElement("li");
+                const severity = entry.type === "bonus" ? "bonus" : "alert";
+                row.className = `local-income-panel__log-entry local-income-panel__log-entry--${severity}`;
+                row.innerHTML = `<span class="local-income-panel__log-day">Day ${entry.day}</span><span>${entry.message}</span>`;
+                localIncomeEventList.appendChild(row);
+            }
         }
     };
     const applyMiniGameReward = (event, result) => {
@@ -1672,6 +1921,15 @@ export const initializeUI = (runner, container, options = {}) => {
     const startMiniGameFromType = (type) => {
         startMiniGameFromEvent(createMiniGameEvent(type));
     };
+    const startPendingMiniGame = () => {
+        const event = runner.state.pendingMiniGame;
+        if (!event)
+            return;
+        runner.state.pendingMiniGame = null;
+        closeSideHustleModal();
+        refreshAll();
+        startMiniGameFromEvent(event);
+    };
     const placeTrade = (direction) => {
         if (!tradeTicker || !tradeSlider)
             return;
@@ -1699,6 +1957,7 @@ export const initializeUI = (runner, container, options = {}) => {
         const clampNote = quantity !== sliderValue ? " (adjusted to max available)" : "";
         const signedQty = direction === "buy" ? quantity : -quantity;
         runner.state.portfolio = executeTrade(runner.state.portfolio, ticker, signedQty, company.price);
+        recordReactiveMicrocapTrade(runner.state, company, quantity, direction);
         selectedTicker = ticker;
         tradeFeedback &&
             (tradeFeedback.textContent = `${direction === "buy" ? "Bought" : "Sold"} ${quantity} ${ticker} shares${clampNote}.`);
@@ -1739,13 +1998,13 @@ export const initializeUI = (runner, container, options = {}) => {
             closeWatchModal();
         }
     });
-    miniGameButton?.addEventListener("click", () => {
-        const event = runner.state.pendingMiniGame;
-        if (!event)
-            return;
-        runner.state.pendingMiniGame = null;
-        refreshAll();
-        startMiniGameFromEvent(event);
+    miniGameButton?.addEventListener("click", startPendingMiniGame);
+    sideHustleModalStart?.addEventListener("click", startPendingMiniGame);
+    sideHustleModalClose?.addEventListener("click", () => closeSideHustleModal());
+    sideHustleModal?.addEventListener("click", (event) => {
+        if (event.target === sideHustleModal) {
+            closeSideHustleModal();
+        }
     });
     storyContinueButton?.addEventListener("click", () => {
         advanceStoryLine();

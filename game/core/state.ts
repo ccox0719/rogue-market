@@ -14,7 +14,13 @@ import type { IntradayRange } from "./intraday.js";
 import { type BondHolding, type BondMarketListing } from "../generators/bondGen.js";
 import type { WhaleInstance } from "../generators/whaleGen.js";
 import type { WhaleDialogueEvent } from "../whale-dialogue.js";
+import type { ReactiveMicrocapPosition } from "../whales/reactiveMicrocapTypes.js";
 import type { MiniGameEventDescriptor } from "../minigames/eventLibrary.js";
+import {
+  createInitialLocalIncomeStreams,
+  type LocalIncomeEventLogEntry,
+  type LocalIncomeStreamStatus,
+} from "../systems/localIncomeSystem.js";
 export type { MiniGameEventDescriptor };
 
 export interface PlayerPortfolio {
@@ -108,6 +114,8 @@ export interface GameState {
   storySceneQueue: StorySceneEvent[];
   devActionLog: string[];
   newsEventLog: string[];
+  localIncomeStreams: Record<string, LocalIncomeStreamStatus>;
+  localIncomeEventLog: LocalIncomeEventLogEntry[];
   newsQueue: MarketNewsItem[];
   recentNews: MarketNewsItem[];
   whaleDialogueQueue: WhaleDialogueEvent[];
@@ -132,6 +140,7 @@ export interface GameState {
   newsDecisionUsed: boolean;
   regulatorShots: number;
   mediaCampaigns: number;
+  reactiveMicrocapPosition: ReactiveMicrocapPosition | null;
 }
 
 interface StateOptions {
@@ -228,6 +237,8 @@ export const createInitialState = (
     storySceneQueue: [],
     devActionLog: [],
     newsEventLog: [],
+    localIncomeStreams: createInitialLocalIncomeStreams(),
+    localIncomeEventLog: [],
     newsQueue: [],
     recentNews: [],
     whaleDialogueQueue: [],
@@ -250,6 +261,7 @@ export const createInitialState = (
     newsDecisionUsed: false,
     regulatorShots: 0,
     mediaCampaigns: 0,
+    reactiveMicrocapPosition: null,
     whaleDefeatMode: null,
     whaleCollapseReason: null,
     whaleCollapsedThisTick: false,

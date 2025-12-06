@@ -43,6 +43,7 @@ import {
   processBondsForDay,
   refreshBondMarket,
 } from "../systems/bondSystem.js";
+import { processLocalIncomeStreams } from "../systems/localIncomeSystem.js";
 import {
   bankruptCompany,
   processStockLifecycle,
@@ -225,6 +226,7 @@ export class GameRunner {
     processStockLifecycle(this.state, this.rng);
     processWatchOrdersForDay(this.state);
     processBondsForDay(this.state, this.rng);
+    processLocalIncomeStreams(this.state, this.rng);
     applyWhaleCollapseIfNeeded(this.state);
     if (this.state.whaleCollapsedThisTick) {
       this.emitStoryCutscenes("whale");

@@ -1,5 +1,7 @@
 import { CONFIG } from "../core/config.js";
 import { createWhaleInstance, findWhaleProfile, pickRandomWhaleProfiles, } from "../generators/whaleGen.js";
+import { cleanupReactiveMicrocap, ensureReactiveMicrocapForWhale, } from "../whales/reactiveMicrocap.js";
+import { getActiveWhaleInstance } from "../whales/whale-state.js";
 const normalizeWeights = (weights) => {
     const total = Object.values(weights).reduce((sum, value) => sum + Math.abs(value), 0);
     if (total === 0) {
@@ -84,6 +86,7 @@ export const updateWhaleInfluence = (state, rng, meta) => {
     if (state.activeWhales.length === 0) {
         initializeWhales(state, rng);
     }
+    cleanupReactiveMicrocap(state);
     state.whaleSectorBonuses = {};
     state.whaleCompanyBonuses = {};
     const currentEraId = state.eras[state.currentEraIndex]?.id;
@@ -123,6 +126,10 @@ export const updateWhaleInfluence = (state, rng, meta) => {
             if (state.whaleActionLog.length > CONFIG.WHALE_LOG_LIMIT) {
                 state.whaleActionLog.shift();
             }
+        }
+        const activeWhale = getActiveWhaleInstance(state);
+        if (visible && activeWhale && activeWhale.id === whale.id) {
+            ensureReactiveMicrocapForWhale(state, whale, profile, rng);
         }
     }
 };

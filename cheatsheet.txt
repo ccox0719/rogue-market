@@ -12,3 +12,4 @@ npm run export-pages
 next edits: 
 
 note: remember to rebuild with `npm run export-pages` and commit the generated `dist/` folder so the published site contains the runtime bundles for the simulation modules.
+

@@ -23,6 +23,7 @@ export interface Company {
   splitCount: number;
   daysBelowBankruptcyThreshold: number;
   daysSinceListing: number;
+  reactiveDetails?: import("../whales/reactiveMicrocapTypes.js").ReactiveMicrocapDetails;
 }
 
 const randRange = (rng: RNG, min: number, max: number): number =>

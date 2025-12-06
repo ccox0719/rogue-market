@@ -4,6 +4,7 @@ import { aggregateArtifactEffects } from "./artifactEffects.js";
 import { generateCompany } from "../generators/companyGen.js";
 import { generateEraDeck } from "../generators/eraGen.js";
 import { generateSectors } from "../generators/sectorGen.js";
+import { createInitialLocalIncomeStreams, } from "../systems/localIncomeSystem.js";
 export const createInitialState = (seed, providedRng, options = {}) => {
     const runSeed = seed ?? Date.now();
     const rng = providedRng ?? createSeededRng(runSeed);
@@ -80,6 +81,8 @@ export const createInitialState = (seed, providedRng, options = {}) => {
         storySceneQueue: [],
         devActionLog: [],
         newsEventLog: [],
+        localIncomeStreams: createInitialLocalIncomeStreams(),
+        localIncomeEventLog: [],
         newsQueue: [],
         recentNews: [],
         whaleDialogueQueue: [],
@@ -102,6 +105,7 @@ export const createInitialState = (seed, providedRng, options = {}) => {
         newsDecisionUsed: false,
         regulatorShots: 0,
         mediaCampaigns: 0,
+        reactiveMicrocapPosition: null,
         whaleDefeatMode: null,
         whaleCollapseReason: null,
         whaleCollapsedThisTick: false,

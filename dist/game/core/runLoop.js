@@ -16,6 +16,7 @@ import { createEraFromTemplate, findEraTemplate } from "../generators/eraGen.js"
 import { processWatchOrdersForDay } from "../systems/watchOrders.js";
 import { initializeWhales, updateWhaleInfluence, } from "../systems/whaleSystem.js";
 import { initializeBondMarket, processBondsForDay, refreshBondMarket, } from "../systems/bondSystem.js";
+import { processLocalIncomeStreams } from "../systems/localIncomeSystem.js";
 import { bankruptCompany, processStockLifecycle, recordLifecycleEvent, spawnIPO, splitCompany, } from "../systems/lifecycleSystem.js";
 import { aggregateLegacyBuffEffects, mergeEffectDescriptors, pickLegacyBuff } from "../systems/legacyBuffSystem.js";
 import { campaignLibrary, findCampaign } from "../content/campaigns.js";
@@ -132,6 +133,7 @@ export class GameRunner {
         processStockLifecycle(this.state, this.rng);
         processWatchOrdersForDay(this.state);
         processBondsForDay(this.state, this.rng);
+        processLocalIncomeStreams(this.state, this.rng);
         applyWhaleCollapseIfNeeded(this.state);
         if (this.state.whaleCollapsedThisTick) {
             this.emitStoryCutscenes("whale");

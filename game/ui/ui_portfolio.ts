@@ -55,7 +55,10 @@ export const populateTickerOptions = (
   for (const company of available) {
     const option = document.createElement("option");
     option.value = company.ticker;
-    option.textContent = `${company.ticker} - ${company.name}`;
+    const label = company.reactiveDetails
+      ? `${company.ticker} - ${company.name} (Reactive Micro-Cap)`
+      : `${company.ticker} - ${company.name}`;
+    option.textContent = label;
     select.appendChild(option);
   }
 };

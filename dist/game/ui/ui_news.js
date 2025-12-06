@@ -23,11 +23,20 @@ export const initializeNewsUI = (container) => {
     const openButton = container.querySelector("[data-action='open-news-modal']");
     const closeButton = container.querySelector("[data-action='close-news-modal']");
     const tickerEl = container.querySelector("[data-role='news-ticker-inner']");
-    const toggleModal = (visible) => {
+    const closeListeners = new Set();
+    let isOpen = false;
+    const setModalVisibility = (visible) => {
         if (!modal)
             return;
         modal.hidden = !visible;
         modal.classList.toggle("news-modal--open", visible);
+        isOpen = visible;
+    };
+    const closeModal = () => {
+        if (!isOpen)
+            return;
+        setModalVisibility(false);
+        closeListeners.forEach((listener) => listener());
     };
     const ensurePlaceholder = () => {
         if (!modalBody)
@@ -41,12 +50,12 @@ export const initializeNewsUI = (container) => {
     };
     openButton?.addEventListener("click", () => {
         ensurePlaceholder();
-        toggleModal(true);
+        setModalVisibility(true);
     });
-    closeButton?.addEventListener("click", () => toggleModal(false));
+    closeButton?.addEventListener("click", () => closeModal());
     modal?.addEventListener("click", (event) => {
         if (event.target === modal) {
-            toggleModal(false);
+            closeModal();
         }
     });
     const appendHeadlines = (headlines) => {
@@ -84,7 +93,7 @@ export const initializeNewsUI = (container) => {
         modalBody.appendChild(fragment);
         trimModalRows(modalBody);
         modalBody.scrollTop = modalBody.scrollHeight;
-        toggleModal(true);
+        setModalVisibility(true);
     };
     const updateTicker = (headlines) => {
         if (!tickerEl || headlines.length === 0)
@@ -100,5 +109,12 @@ export const initializeNewsUI = (container) => {
     return {
         appendHeadlines,
         updateTicker,
+        onClose(listener) {
+            closeListeners.add(listener);
+            return () => closeListeners.delete(listener);
+        },
+        isOpen() {
+            return isOpen;
+        },
     };
 };
