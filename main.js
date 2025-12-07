@@ -42,15 +42,21 @@ const bootstrap = async () => {
       "./game/saves/metaSave.js",
       "./dist/game/saves/metaSave.js"
     );
+    const { loadRun } = await importWithFallback(
+      "./game/saves/saveManager.js",
+      "./dist/game/saves/saveManager.js"
+    );
     const { changeDifficulty } = await importWithFallback(
       "./game/systems/metaProgress.js",
       "./dist/game/systems/metaProgress.js"
     );
 
     const savedMeta = loadMeta();
+    const savedRun = loadRun();
     let uiController = null;
     const runner = new GameRunner({
       metaState: savedMeta,
+      resumeState: savedRun ?? undefined,
       onMetaUpdate: (meta) => {
         uiController?.updateMeta(meta);
         status.textContent = runner.summary();

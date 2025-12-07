@@ -4,7 +4,7 @@ import { runDailyEvents } from "../systems/eventSystem.js";
 import { updatePrices } from "../systems/priceSystem.js";
 import { advanceEraProgress, getCurrentEra } from "../systems/eraSystem.js";
 import { portfolioValue } from "../systems/portfolioSystem.js";
-import { saveRun } from "../saves/saveManager.js";
+import { saveRun, clearRun } from "../saves/saveManager.js";
 import { saveMeta } from "../saves/metaSave.js";
 import { awardXp, defaultMetaState, getDifficultyRating, recordRunOutcome, setActiveCampaign, setActiveChallenge, addLegacyBuff, unlockCampaign, recordCampaignRun, recordChallengeScore, setDifficulty, resetXp, } from "./metaState.js";
 import { progressArtifact } from "../systems/metaProgress.js";
@@ -64,29 +64,41 @@ export class GameRunner {
         this.challengeId = challengeDef?.id ?? null;
         this.metaState = setActiveChallenge(this.metaState, this.challengeId);
         const runSeed = options.seed ?? challengeDef?.seed ?? Date.now();
-        this.rng = createSeededRng(runSeed);
-        if (options.difficultyOverride) {
-            this.metaState = setDifficulty(this.metaState, options.difficultyOverride);
-        }
-        this.difficulty = getDifficultyMode(this.metaState.difficulty);
+        const resumeState = options.resumeState && !options.resumeState.runOver
+            ? options.resumeState
+            : null;
         this.onMetaUpdate = options.onMetaUpdate;
         this.onSave = options.onSave;
-        this.state = createInitialState(runSeed, this.rng, {
-            difficulty: this.difficulty,
-        });
-        initializeWhales(this.state, this.rng);
-        this.storyRunner = createStoryRunnerState(this.state);
-        initializeBondMarket(this.state, this.rng);
-        this.applyCampaignModifiers();
-        this.applyChallengeModifiers();
-        this.grantStartingLevelArtifact();
-        const initialEffects = this.refreshArtifactEffects();
-        this.applyStartingCashBonus(initialEffects);
-        if (this.state.eras.length > 0) {
-            this.state.eras[0].revealed = true;
+        if (resumeState) {
+            this.state = resumeState;
+            this.rng = createSeededRng(this.state.seed ?? runSeed);
+            this.metaState = setDifficulty(this.metaState, this.state.difficultyId);
+            this.difficulty = getDifficultyMode(this.metaState.difficulty);
+            this.storyRunner = createStoryRunnerState(this.state);
         }
-        this.updateNextEraPrediction();
-        this.emitStoryCutscenes("start");
+        else {
+            this.rng = createSeededRng(runSeed);
+            if (options.difficultyOverride) {
+                this.metaState = setDifficulty(this.metaState, options.difficultyOverride);
+            }
+            this.difficulty = getDifficultyMode(this.metaState.difficulty);
+            this.state = createInitialState(runSeed, this.rng, {
+                difficulty: this.difficulty,
+            });
+            initializeWhales(this.state, this.rng);
+            this.storyRunner = createStoryRunnerState(this.state);
+            initializeBondMarket(this.state, this.rng);
+            this.applyCampaignModifiers();
+            this.applyChallengeModifiers();
+            this.grantStartingLevelArtifact();
+            const initialEffects = this.refreshArtifactEffects();
+            this.applyStartingCashBonus(initialEffects);
+            if (this.state.eras.length > 0) {
+                this.state.eras[0].revealed = true;
+            }
+            this.updateNextEraPrediction();
+            this.emitStoryCutscenes("start");
+        }
         saveRun(this.state);
         saveMeta(this.metaState);
     }
@@ -350,6 +362,7 @@ export class GameRunner {
         saveMeta(this.metaState);
         this.notifyMetaChange();
         this.prepareCarryChoices();
+        clearRun();
     }
     notifyMetaChange() {
         if (this.onMetaUpdate) {
