@@ -14,7 +14,11 @@ import type {
 import type { MetaProfile } from "../core/metaState.js";
 import { drawSparkline, drawPieChart, type PieSegment } from "../charts/miniChart.js";
 import { formatCurrency, createListItem } from "./ui_helpers.js";
-import { refreshHoldingsPanel, populateTickerOptions } from "./ui_portfolio.js";
+import {
+  refreshHoldingsPanel,
+  populateTickerOptions,
+  type HoldingsSortMode,
+} from "./ui_portfolio.js";
 import { renderEventList } from "./ui_events.js";
 import { renderEraList } from "./ui_eras.js";
 import { initializeNewsUI } from "./ui_news.js";
@@ -118,8 +122,27 @@ export const initializeUI = (
         </nav>
       <div class="view-stack">
         <article class="view-page view-page--active" data-view="dashboard">
-          <div class="ticker-tape" data-role="ticker-tape">
-            <div class="ticker-tape__strip" data-role="ticker-strip"></div>
+          <div class="dashboard-banner">
+            <div class="ticker-tape" data-role="ticker-tape">
+              <div class="ticker-tape__strip" data-role="ticker-strip"></div>
+            </div>
+            <div class="ticker-divider" aria-hidden="true"></div>
+            <div
+              class="era-status"
+              data-role="era-status"
+              data-action="open-cheat-sheet"
+              tabindex="0"
+              role="button"
+              aria-live="polite"
+            >
+              <span class="era-status__label">Current era</span>
+              <strong class="era-status__name" data-role="era-name">Unknown</strong>
+              <span class="era-status__progress" data-role="era-progress">Day 0 / 0</span>
+            </div>
+            <div class="news-ticker" data-role="news-ticker">
+              <button type="button" class="news-ticker__launch" data-action="open-news-modal">News</button>
+              <div class="news-ticker__inner" data-role="news-ticker-inner"></div>
+            </div>
           </div>
           <section class="panel buy-panel" data-panel="buy">
             <header class="panel-header">
@@ -155,7 +178,17 @@ export const initializeUI = (
               </div>
               <div class="holdings-card">
                 <div class="holdings-card__header">
-                  <h3>Holdings</h3>
+                  <div>
+                    <h3>Holdings</h3>
+                  </div>
+                  <div class="holdings-card__sort">
+                    <span class="holdings-card__sort-label">Sort</span>
+                    <select data-role="holdings-sort">
+                      <option value="ticker" selected>Ticker</option>
+                      <option value="value">Value</option>
+                      <option value="delta">Daily change</option>
+                    </select>
+                  </div>
                 </div>
                 <ul data-role="holdings-list"></ul>
               </div>
@@ -187,70 +220,59 @@ export const initializeUI = (
                   <p class="reactive-microcap-card__marketcap" data-role="reactive-microcap-marketcap"></p>
                 </div>
               </div>
-                <div class="trigger-card">
-                  <div class="trigger-card__header">
-                    <h3>Triggers</h3>
-                    <button type="button" data-action="open-watch" class="trigger-new">+ New Trigger</button>
-                  </div>
-                  <ul data-role="watch-list"></ul>
+              <div class="side-hustle-bar">
+                <div class="side-hustle-bar__text">
+                  <strong data-role="side-hustle-title">Side Hustle</strong>
+                  <span data-role="side-hustle-subtitle">Side gigs drop in randomly - keep an eye on the board.</span>
                 </div>
-              <div class="side-hustle-card">
-                  <div class="side-hustle-card__header">
-                    <h3 data-role="side-hustle-title">Side Hustle</h3>
-                    <p class="side-hustle-card__subtitle" data-role="side-hustle-subtitle">
-                      Side gigs drop in randomly—keep an eye on the board.
-                    </p>
+                <button type="button" class="side-hustle-bar__button" data-action="start-mini-game" disabled>
+                  Watch the board
+                </button>
+              </div>
+              <div class="local-income-panel" data-role="local-income-panel">
+                <div class="local-income-panel__header">
+                  <div>
+                    <h3>Community Income Hub</h3>
+                    <p>Blend steadier neighborhood cash with nearby bonds.</p>
                   </div>
-                  <p class="side-hustle-card__story" data-role="side-hustle-story">
-                    No gigs are active right now. Pause and listen to the neighborhood.
-                  </p>
-                  <button type="button" class="side-hustle-card__button" data-action="start-mini-game" disabled>
-                    Watch the board
-                  </button>
+                  <span class="local-income-panel__tag">DCA + Bonds</span>
                 </div>
-                <div class="local-income-panel" data-role="local-income-panel">
-                  <div class="local-income-panel__header">
-                    <div>
-                      <h3>Community Income Hub</h3>
-                      <p>Blend steadier neighborhood cash with nearby bonds.</p>
-                    </div>
-                    <span class="local-income-panel__tag">DCA + Bonds</span>
+                <div class="local-income-panel__active" data-role="dca-active"></div>
+                <div class="local-income-panel__stats" data-role="community-income-stats"></div>
+                <div class="local-income-panel__offers" data-role="dca-offers"></div>
+                <div class="local-income-panel__log">
+                  <div class="local-income-panel__log-title">
+                    <span>Recent events</span>
+                    <small>rare and thematic</small>
                   </div>
-                  <div class="local-income-panel__active" data-role="dca-active"></div>
-                  <div class="local-income-panel__offers" data-role="dca-offers"></div>
-                  <div class="local-income-panel__log">
-                    <div class="local-income-panel__log-title">
-                      <span>Recent events</span>
-                      <small>rare and thematic</small>
+                  <div class="local-income-panel__log-columns">
+                    <div class="local-income-panel__log-column">
+                      <h4>Macro streams</h4>
+                      <ul data-role="local-income-event-list"></ul>
                     </div>
-                    <div class="local-income-panel__log-columns">
-                      <div class="local-income-panel__log-column">
-                        <h4>Macro streams</h4>
-                        <ul data-role="local-income-event-list"></ul>
-                      </div>
-                      <div class="local-income-panel__log-column">
-                        <h4>DCA events</h4>
-                        <ul data-role="dca-event-list"></ul>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="bond-market-section">
-                    <div class="bond-market-section__header">
-                      <h3>Bond Tenders</h3>
-                      <p>Short-duration issues anchor the broader income mix.</p>
-                    </div>
-                    <div class="bond-market-grid">
-                      <div class="bond-market__list">
-                        <h4>Available Bonds</h4>
-                        <ul data-role="bond-market-list"></ul>
-                      </div>
-                      <div class="bond-market__holdings">
-                        <h4>Your Holdings</h4>
-                        <ul data-role="bond-holdings-list"></ul>
-                      </div>
+                    <div class="local-income-panel__log-column">
+                      <h4>DCA events</h4>
+                      <ul data-role="dca-event-list"></ul>
                     </div>
                   </div>
                 </div>
+                <div class="bond-market-section">
+                  <div class="bond-market-section__header">
+                    <h3>Bond Tenders</h3>
+                    <p>Short-duration issues anchor the broader income mix.</p>
+                  </div>
+                  <div class="bond-market-grid">
+                    <div class="bond-market__list">
+                      <h4>Available Bonds</h4>
+                      <ul data-role="bond-market-list"></ul>
+                    </div>
+                    <div class="bond-market__holdings">
+                      <h4>Your Holdings</h4>
+                      <ul data-role="bond-holdings-list"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </article>
@@ -344,52 +366,19 @@ export const initializeUI = (
               <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
             </header>
             <div class="panel-body">
-              <div class="summary-graph-row summary-graph-row--primary">
-                <div class="summary-graph summary-graph--sparkline">
+              <div class="market-analysis">
+                <div class="market-analysis__chart">
                   <p class="summary-graph-label">Portfolio trajectory</p>
                   <canvas width="260" height="220" data-role="summary-chart"></canvas>
                 </div>
-                <div class="summary-graph summary-graph--timeline">
+                <div class="market-analysis__chart market-analysis__chart--timeline">
                   <p class="summary-graph-label">Era timeline</p>
                   <canvas width="220" height="160" data-role="summary-era-timeline"></canvas>
                 </div>
-              </div>
-              <div class="summary-graph-row summary-graph-row--secondary">
-                <div class="summary-graph summary-graph--distribution">
-                  <p class="summary-graph-label">Sector exposure</p>
-                  <canvas width="180" height="200" data-role="summary-distribution"></canvas>
-                </div>
-                <div class="summary-graph summary-graph--pie">
-                  <div class="summary-graph-label-row">
-                    <p class="summary-graph-label">Active triggers</p>
-                    <button type="button" class="summary-trigger-button" data-action="open-watch">Triggers</button>
-                  </div>
-                  <canvas width="140" height="160" data-role="summary-watch-pie"></canvas>
-                </div>
+                <div class="market-summary-grid" data-role="market-summary-grid"></div>
               </div>
             </div>
           </section>
-
-          <section class="panel eras-panel" data-panel="eras">
-            <header class="panel-header">
-              <h2>Eras</h2>
-              <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
-            </header>
-            <div class="panel-body">
-              <ul data-role="era-list"></ul>
-            </div>
-          </section>
-
-          <section class="panel lifecycle-panel" data-panel="lifecycle">
-            <header class="panel-header">
-              <h2>Market Lifecycle</h2>
-              <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
-            </header>
-            <div class="panel-body">
-              <ul class="lifecycle-log" data-role="lifecycle-log"></ul>
-            </div>
-          </section>
-
         </article>
         <article class="view-page" data-view="whales">
           <section class="panel whale-panel" data-panel="whale">
@@ -671,7 +660,8 @@ export const initializeUI = (
       </div>
     </div>
   `;
-  container.insertAdjacentHTML(
+  const modalHost = document.body ?? container;
+  modalHost.insertAdjacentHTML(
     "beforeend",
     `
     <div class="story-dialog" data-role="story-dialog" hidden>
@@ -682,7 +672,7 @@ export const initializeUI = (
     </div>
     `
   );
-  container.insertAdjacentHTML(
+  modalHost.insertAdjacentHTML(
     "beforeend",
     `
     <div class="news-modal" data-role="news-modal" hidden>
@@ -692,6 +682,17 @@ export const initializeUI = (
           <button type="button" class="news-modal__close" data-action="close-news-modal" aria-label="Close news modal">Close</button>
         </header>
         <div class="news-modal__body" data-role="news-modal-body"></div>
+      </div>
+    </div>
+    <div class="cheat-sheet-modal" data-role="cheat-sheet-modal" hidden>
+      <div class="cheat-sheet-modal__dialog">
+        <header class="cheat-sheet-modal__header">
+          <span>Cheat Sheet</span>
+          <button type="button" class="cheat-sheet-modal__close" data-action="close-cheat-sheet" aria-label="Close cheat sheet">Close</button>
+        </header>
+        <div class="cheat-sheet-modal__body">
+          <div class="cheat-sheet-modal__current" data-role="cheat-sheet-current"></div>
+        </div>
       </div>
     </div>
     <div class="side-hustle-modal" data-role="side-hustle-modal" hidden>
@@ -708,10 +709,6 @@ export const initializeUI = (
           <button type="button" class="side-hustle-modal__action" data-action="start-side-hustle">Start gig</button>
         </div>
       </div>
-    </div>
-    <div class="news-ticker" data-role="news-ticker">
-      <button type="button" class="news-ticker__launch" data-action="open-news-modal">News</button>
-      <div class="news-ticker__inner" data-role="news-ticker-inner"></div>
     </div>
     `
   );
@@ -732,13 +729,18 @@ export const initializeUI = (
   const summaryDistribution = container.querySelector<HTMLCanvasElement>("[data-role='summary-distribution']");
   const summaryEraTimeline = container.querySelector<HTMLCanvasElement>("[data-role='summary-era-timeline']");
   const summaryWatchPie = container.querySelector<HTMLCanvasElement>("[data-role='summary-watch-pie']");
+  const marketSummaryGrid = container.querySelector<HTMLElement>("[data-role='market-summary-grid']");
   const storyGaugeAct = container.querySelector<HTMLElement>("[data-role='story-gauge-act']");
   const storyGaugeDay = container.querySelector<HTMLElement>("[data-role='story-gauge-day']");
   const storyGaugeFill = container.querySelector<HTMLElement>("[data-role='story-gauge-fill']");
   const storyGaugeDesc = container.querySelector<HTMLElement>("[data-role='story-gauge-desc']");
   const eraList = container.querySelector<HTMLUListElement>("[data-role='era-list']");
   const eventList = container.querySelector<HTMLUListElement>("[data-role='event-list']");
+  const eraStatus = container.querySelector<HTMLElement>("[data-role='era-status']");
+  const eraStatusName = container.querySelector<HTMLElement>("[data-role='era-name']");
+  const eraStatusProgress = container.querySelector<HTMLElement>("[data-role='era-progress']");
   const holdingsList = container.querySelector<HTMLUListElement>("[data-role='holdings-list']");
+  const holdingsSortSelect = container.querySelector<HTMLSelectElement>("[data-role='holdings-sort']");
   const chartCanvas = container.querySelector<HTMLCanvasElement>("[data-role='company-chart']");
   const selectedInfo = container.querySelector<HTMLElement>("[data-role='selected-info']");
   const selectedPriceEl = container.querySelector<HTMLElement>("[data-role='selected-price']");
@@ -783,19 +785,23 @@ export const initializeUI = (
   const localIncomeStreams = container.querySelector<HTMLElement>("[data-role='local-income-streams']");
   const localIncomeEventList = container.querySelector<HTMLUListElement>("[data-role='local-income-event-list']");
   const dcaEventList = container.querySelector<HTMLUListElement>("[data-role='dca-event-list']");
-  const sideHustleModal = container.querySelector<HTMLElement>("[data-role='side-hustle-modal']");
-  const sideHustleModalTitle = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-title']");
-  const sideHustleModalSubtitle = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-subtitle']");
-  const sideHustleModalStory = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-story']");
-  const sideHustleModalPrompt = container.querySelector<HTMLElement>("[data-role='side-hustle-modal-prompt']");
-  const sideHustleModalClose = container.querySelector<HTMLButtonElement>("[data-action='close-side-hustle-modal']");
+  const cheatSheetModal = document.querySelector<HTMLElement>("[data-role='cheat-sheet-modal']");
+  const cheatSheetCurrent = document.querySelector<HTMLElement>("[data-role='cheat-sheet-current']");
+  const cheatSheetClose = document.querySelector<HTMLButtonElement>("[data-action='close-cheat-sheet']");
+  const sideHustleModal = document.querySelector<HTMLElement>("[data-role='side-hustle-modal']");
+  const sideHustleModalTitle = document.querySelector<HTMLElement>("[data-role='side-hustle-modal-title']");
+  const sideHustleModalSubtitle = document.querySelector<HTMLElement>("[data-role='side-hustle-modal-subtitle']");
+  const sideHustleModalStory = document.querySelector<HTMLElement>("[data-role='side-hustle-modal-story']");
+  const sideHustleModalPrompt = document.querySelector<HTMLElement>("[data-role='side-hustle-modal-prompt']");
+  const sideHustleModalClose = document.querySelector<HTMLButtonElement>("[data-action='close-side-hustle-modal']");
   const sideHustleModalStart = container.querySelector<HTMLButtonElement>("[data-action='start-side-hustle']");
-  const sideHustleCard = container.querySelector<HTMLElement>(".side-hustle-card");
+  const sideHustleCard = container.querySelector<HTMLElement>(".side-hustle-bar");
   const watchFeedback = container.querySelector<HTMLElement>("[data-role='watch-feedback']");
-  const storyDialog = container.querySelector<HTMLElement>("[data-role='story-dialog']");
+  const storyDialog = document.querySelector<HTMLElement>("[data-role='story-dialog']");
   const storyLine = container.querySelector<HTMLElement>("[data-role='story-line']");
   const dcaOffersContainer = container.querySelector<HTMLElement>("[data-role='dca-offers']");
   const dcaActiveInfo = container.querySelector<HTMLElement>("[data-role='dca-active']");
+  const communityIncomeStats = container.querySelector<HTMLElement>("[data-role='community-income-stats']");
   const balanceLevelsContainer = container.querySelector<HTMLElement>("[data-role='balance-levels']");
   const balanceCopyMessageEl = container.querySelector<HTMLElement>("[data-role='balance-copy-message']");
   const whaleLogMessageEl = container.querySelector<HTMLElement>("[data-role='whale-log-message']");
@@ -834,6 +840,7 @@ export const initializeUI = (
   const STORY_MODAL_CLASS = "story-modal-open";
   let currentMeta: MetaProfile = options.metaState ?? runner.metaState;
   let selectedTicker: string | undefined = undefined;
+  let holdingsSortMode: HoldingsSortMode = "ticker";
   let lastReactiveMicrocapTicker: string | null = null;
   const summaryHistory: number[] = [];
   const WATCH_ORDER_COLORS: Record<WatchOrderType, string> = {
@@ -902,8 +909,9 @@ export const initializeUI = (
     storyToggleButton.textContent = storyEnabled ? "Story: On" : "Story: Off";
     storyToggleButton.classList.toggle("story-toggle--disabled", !storyEnabled);
   };
-  const newsUI = initializeNewsUI(container);
+  const newsUI = initializeNewsUI(document);
   const SIDE_HUSTLE_MODAL_OPEN_CLASS = "side-hustle-modal--open";
+  const CHEAT_SHEET_MODAL_OPEN_CLASS = "cheat-sheet-modal--open";
   let queuedSideHustleEvent: PendingMiniGameEvent | null = null;
   let sideHustleModalShownEvent: PendingMiniGameEvent | null = null;
   let sideHustleModalQueued = false;
@@ -949,13 +957,13 @@ export const initializeUI = (
   let sideHustleHighlightTimer: ReturnType<typeof setTimeout> | null = null;
   const highlightSideHustleCard = (): void => {
     if (!sideHustleCard) return;
-    sideHustleCard.classList.add("side-hustle-card--highlight");
+    sideHustleCard.classList.add("side-hustle-bar--highlight");
     sideHustleCard.scrollIntoView({ behavior: "smooth", block: "center" });
     if (sideHustleHighlightTimer) {
       clearTimeout(sideHustleHighlightTimer);
     }
     sideHustleHighlightTimer = setTimeout(() => {
-      sideHustleCard.classList.remove("side-hustle-card--highlight");
+      sideHustleCard.classList.remove("side-hustle-bar--highlight");
       sideHustleHighlightTimer = null;
     }, 2000);
   };
@@ -974,6 +982,36 @@ export const initializeUI = (
     sideHustleModalQueued = true;
     highlightSideHustleCard();
   };
+
+  const closeCheatSheetModal = (): void => {
+    if (!cheatSheetModal) return;
+    cheatSheetModal.hidden = true;
+    cheatSheetModal.classList.remove(CHEAT_SHEET_MODAL_OPEN_CLASS);
+  };
+
+  const openCheatSheetModal = (): void => {
+    if (!cheatSheetModal) return;
+    if (cheatSheetCurrent) {
+      const currentEra = runner.state.eras[runner.state.currentEraIndex];
+      cheatSheetCurrent.innerHTML = formatEraCheatSection(currentEra?.id);
+    }
+    cheatSheetModal.hidden = false;
+    cheatSheetModal.classList.add(CHEAT_SHEET_MODAL_OPEN_CLASS);
+  };
+
+  cheatSheetClose?.addEventListener("click", closeCheatSheetModal);
+  cheatSheetModal?.addEventListener("click", (event) => {
+    if (event.target === cheatSheetModal) {
+      closeCheatSheetModal();
+    }
+  });
+  eraStatus?.addEventListener("click", openCheatSheetModal);
+  eraStatus?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openCheatSheetModal();
+    }
+  });
 
   newsUI.onClose(() => {
     if (sideHustleModalQueued) {
@@ -1040,9 +1078,67 @@ export const initializeUI = (
       })
     : null;
 
+  const formatGrowthPercent = (value: number): string => {
+    const sign = value >= 0 ? "+" : "";
+    return `${sign}${(value * 100).toFixed(2)}%`;
+  };
+
   const renderSummaryGraph = () => {
     if (!summaryChart) return;
     drawSparkline(summaryChart, summaryHistory.slice(-40));
+  };
+
+  const renderMarketSummary = (): void => {
+    if (!marketSummaryGrid) return;
+    const history = summaryHistory.length ? [...summaryHistory] : [];
+    const latest = history.at(-1) ?? runner.getPortfolioValue();
+    const previous = history.length > 1 ? history[history.length - 2] : latest;
+    const initial = history[0] ?? latest;
+    const deltas: number[] = [];
+    for (let i = 1; i < history.length; i += 1) {
+      deltas.push(history[i] - history[i - 1]);
+    }
+    const totalDelta = latest - initial;
+    const avgDaily = deltas.length ? deltas.reduce((sum, delta) => sum + delta, 0) / deltas.length : 0;
+    const bestDay = deltas.length ? Math.max(...deltas) : 0;
+    const worstDay = deltas.length ? Math.min(...deltas) : 0;
+    const profitableDays = deltas.filter((delta) => delta > 0).length;
+    const profitablePct = deltas.length ? (profitableDays / deltas.length) * 100 : 0;
+    const stats = [
+      {
+        label: "Net worth",
+        value: formatCurrency(latest),
+        detail: `Cash ${formatCurrency(runner.state.portfolio.cash)} · Holdings ${formatCurrency(
+          Math.max(0, latest - runner.state.portfolio.cash)
+        )}`,
+      },
+      {
+        label: "Session growth",
+        value: formatGrowthPercent(initial !== 0 ? totalDelta / initial : 0),
+        detail: `Best day ${formatCurrency(bestDay)} · Worst day ${formatCurrency(worstDay)}`,
+      },
+      {
+        label: "Daily avg",
+        value: formatCurrency(avgDaily),
+        detail: `${profitablePct.toFixed(1)}% profitable days`,
+      },
+      {
+        label: "Last movement",
+        value: formatCurrency(latest - previous),
+        detail: "Compared to prior day",
+      },
+    ];
+    marketSummaryGrid.innerHTML = stats
+      .map(
+        (stat) => `
+        <div class="market-stat-card">
+          <span class="market-stat-card__value">${stat.value}</span>
+          <span class="market-stat-card__label">${stat.label}</span>
+          <p class="market-stat-card__detail">${stat.detail}</p>
+        </div>
+      `
+      )
+      .join("");
   };
 
   const renderCampaignPanel = () => {
@@ -1368,6 +1464,7 @@ export const initializeUI = (
     renderSectorDistribution();
     renderEraTimeline();
     renderWatchPie();
+    renderMarketSummary();
     if (summaryStripProgress) {
       const era = runner.state.eras[runner.state.currentEraIndex];
       const duration = era?.duration ?? 0;
@@ -1424,6 +1521,24 @@ export const initializeUI = (
         ? `Mutation: ${runner.state.mutationMessage}`
         : "";
     }
+    updateEraStatus();
+  };
+
+  const updateEraStatus = (): void => {
+    if (!eraStatus) return;
+    const era = runner.state.eras[runner.state.currentEraIndex];
+    if (eraStatusName) {
+      eraStatusName.textContent = era?.name ?? "Unknown era";
+    }
+    if (eraStatusProgress) {
+      const progressDays = era ? Math.min(era.duration, runner.state.currentEraDay + 1) : 0;
+      eraStatusProgress.textContent = era
+        ? `Day ${progressDays}/${era.duration}`
+        : "Day 0 / --";
+    }
+    const trendBias = era?.effects?.globalTrendBias ?? era?.effects?.global ?? 0;
+    eraStatus.classList.toggle("era-status--up", trendBias >= 0);
+    eraStatus.classList.toggle("era-status--down", trendBias < 0);
   };
 
   const updateSliderValueDisplay = () => {
@@ -1720,7 +1835,8 @@ export const initializeUI = (
       runner.state.portfolio,
       runner.state.companies,
       selectedTicker,
-      handleHoldingSelect
+      handleHoldingSelect,
+      holdingsSortMode
     );
   };
 
@@ -2084,6 +2200,230 @@ export const initializeUI = (
   const DEFAULT_MINI_GAME_STORY =
     "No gigs are active right now. Pause and listen to the neighborhood.";
   const DEFAULT_MINI_GAME_BUTTON = "Watch the board";
+  interface EraCheatCard {
+    title: string;
+    tagLine: string;
+    bullets: string[];
+  }
+
+  const ERA_CHEAT_INFO: Record<string, EraCheatCard> = {
+    "calm-market": {
+      title: "Calm Market",
+      tagLine: "Easy · Common",
+      bullets: [
+        "Bias: Slightly up (globalTrendBias 0.005)",
+        "Volatility: Lower, fewer/softer events",
+        "Bonds: Slightly worse yields, safer defaults",
+        "Play it: Build base positions, DCA, low drama.",
+      ],
+    },
+    "tech-boom": {
+      title: "Tech Boom",
+      tagLine: "Medium · Uncommon",
+      bullets: [
+        "Bias: Up, especially Tech (+0.05)",
+        "Volatility: Higher; more splits & IPOs",
+        "Losers: Energy, Infrastructure",
+        "Play it: Lean into Tech & growth; expect sharper swings.",
+      ],
+    },
+    "energy-crisis": {
+      title: "Energy Crisis",
+      tagLine: "Hard · Uncommon",
+      bullets: [
+        "Bias: Slightly down overall",
+        "Volatility: High",
+        "Winners: Energy big surge (+0.12)",
+        "Losers: Supply, Retail",
+        "Play it: Own Energy, be careful with anything dependent on fuel/logistics.",
+      ],
+    },
+    "liquidity-crunch": {
+      title: "Liquidity Crunch",
+      tagLine: "Very Hard · Rare",
+      bullets: [
+        "Bias: Strongly down (-0.03)",
+        "Volatility: Very high, more events, bigger intraday moves",
+        "Bonds: Higher yields but higher defaults; harsher bankruptcies",
+        "Play it: Raise cash, favor high-quality bonds, don’t over-leverage.",
+      ],
+    },
+    recovery: {
+      title: "Recovery",
+      tagLine: "Medium · Common",
+      bullets: [
+        "Bias: Up (0.015)",
+        "Volatility: Slightly below normal",
+        "Winners: Retail, Infrastructure",
+        "Play it: Rotate back into cyclicals and quality risk.",
+      ],
+    },
+    "inflation-scare": {
+      title: "Inflation Scare",
+      tagLine: "Hard · Uncommon",
+      bullets: [
+        "Bias: Down (-0.02)",
+        "Volatility: Elevated",
+        "Losers: Retail, Tech",
+        "Winners: Supply chain / input producers",
+        "Play it: Defensives + producers; be cautious on rate-sensitive growth.",
+      ],
+    },
+    "stimulus-wave": {
+      title: "Stimulus Wave",
+      tagLine: "Easy · Common",
+      bullets: [
+        "Bias: Strongly up (0.03)",
+        "Volatility: Mildly higher, more IPOs",
+        "Bonds: Yields a bit worse",
+        "Winners: Retail, Tech",
+        "Play it: Risk-on; ride the rally but know it’s policy-driven.",
+      ],
+    },
+    "crypto-winter": {
+      title: "Crypto Winter",
+      tagLine: "Hard · Rare",
+      bullets: [
+        "Bias: Down (-0.025)",
+        "Volatility: Very high",
+        "Winners: Safer bonds (slightly better yields)",
+        "Losers: Blockchain, FinTech; harsher bankruptcies",
+        "Play it: Trim speculative stuff; hunt value and durable balance sheets.",
+      ],
+    },
+    "bubble-euphoria": {
+      title: "Bubble Euphoria",
+      tagLine: "High-risk · Rare",
+      bullets: [
+        "Bias: Very up (0.04)",
+        "Volatility: High, huge intraday ranges; more splits & IPOs",
+        "Play it: You can make a lot fast—but protect gains and don’t overstay.",
+      ],
+    },
+    "regulatory-crackdown": {
+      title: "Regulatory Crackdown",
+      tagLine: "Medium · Uncommon",
+      bullets: [
+        "Bias: Slightly down",
+        "Volatility: Slightly up",
+        "Losers: Tech, FinTech; lots of scandals/regulation events",
+        "Play it: Reduce exposure to heavily regulated darlings.",
+      ],
+    },
+    "earnings-season": {
+      title: "Earnings Season",
+      tagLine: "Swingy · Rare",
+      bullets: [
+        "Bias: Neutral; volatility drives",
+        "Volatility: Very high; frequent events",
+        "Play it: Expect big winners and losers; single-stock risk is huge.",
+      ],
+    },
+    "fear-cycle": {
+      title: "Fear Cycle",
+      tagLine: "Medium · Uncommon",
+      bullets: [
+        "Bias: Down (-0.015)",
+        "Volatility: Up",
+        "Winners: Climate, BioTech (defensive/alt plays)",
+        "Losers: Tech",
+        "Play it: Defensive / “safe story” names; avoid speculative growth.",
+      ],
+    },
+    "optimism-cycle": {
+      title: "Optimism Cycle",
+      tagLine: "Easy · Common",
+      bullets: [
+        "Bias: Up (0.02)",
+        "Volatility: Slightly higher, more IPOs",
+        "Winners: Tech, Retail",
+        "Play it: Risk appetite returns; growth and consumers benefit.",
+      ],
+    },
+    "supply-chain-knot": {
+      title: "Supply Chain Knot",
+      tagLine: "Hard · Uncommon",
+      bullets: [
+        "Bias: Slightly down",
+        "Volatility: Up",
+        "Losers: Infrastructure, Retail",
+        "Play it: Be wary of anything dependent on smooth logistics.",
+      ],
+    },
+    "housing-boom": {
+      title: "Housing Boom",
+      tagLine: "Easy · Common",
+      bullets: [
+        "Bias: Slightly up",
+        "Volatility: Slightly up",
+        "Winners: Infrastructure, FinTech (mortgages/financing)",
+        "Play it: Lean into construction & housing-linked finance.",
+      ],
+    },
+    "housing-bust": {
+      title: "Housing Bust",
+      tagLine: "Very Hard · Rare",
+      bullets: [
+        "Bias: Strongly down (-0.04)",
+        "Volatility: High, harsher bankruptcies, fewer IPOs",
+        "Losers: Infrastructure, FinTech, Retail",
+        "Play it: De-risk aggressively; this is a capital-preservation era.",
+      ],
+    },
+    "currency-flux": {
+      title: "Currency Flux",
+      tagLine: "Chaotic · Uncommon",
+      bullets: [
+        "Bias: Neutral overall",
+        "Volatility: Very high (volatilityMultiplier 2)",
+        "Winners: Blockchain",
+        "Losers: Supply",
+        "Play it: Expect wild swings; smaller positions, tighter risk.",
+      ],
+    },
+    "rate-drop": {
+      title: "Rate Drop",
+      tagLine: "Easy · Common",
+      bullets: [
+        "Bias: Up (0.025)",
+        "Volatility: Slightly up",
+        "Winners: Tech & Infrastructure (rate-sensitive growth)",
+        "Play it: Classic “rates cut → growth up” environment.",
+      ],
+    },
+    "volatility-storm": {
+      title: "Volatility Storm",
+      tagLine: "Extreme · Rare",
+      bullets: [
+        "Bias: Neutral, but huge swings both ways",
+        "Volatility: Maxed; big intraday ranges, harsher bankruptcies",
+        "Play it: Survival mode. Small sizes, fast reactions; expect +/- days to be huge.",
+      ],
+    },
+  };
+
+  const formatEraCheatSection = (eraId?: string): string => {
+    const info = eraId ? ERA_CHEAT_INFO[eraId] : undefined;
+    if (!info) {
+      return `<div class="cheat-sheet-modal__current-empty">
+        <p>Current era reference is unavailable here. Scroll below to view the wider notes.</p>
+      </div>`;
+    }
+    const bulletList = info.bullets
+      .map((line) => `<li>${line}</li>`)
+      .join("");
+    return `
+      <div class="cheat-sheet-modal__current-card">
+        <div class="cheat-sheet-modal__current-header">
+          <strong>${info.title}</strong>
+          <span>${info.tagLine}</span>
+        </div>
+        <ul class="cheat-sheet-modal__current-list">
+          ${bulletList}
+        </ul>
+      </div>
+    `;
+  };
 
   const refreshMiniGameCard = (): void => {
     const event = runner.state.pendingMiniGame;
@@ -2134,10 +2474,26 @@ export const initializeUI = (
       <p>Daily contribution: $${state.dailyContribution} · Yield: ${yieldRate}%</p>
       <p class="local-income-panel__active-desc">${stream.description}</p>
       ${
-        lastOfferMessage
-          ? `<p class="local-income-panel__active-offer">${lastOfferMessage}</p>`
-          : ""
+      lastOfferMessage
+        ? `<p class="local-income-panel__active-offer">${lastOfferMessage}</p>`
+        : ""
       }
+    `;
+  };
+
+  const renderCommunityIncomeStats = (): void => {
+    if (!communityIncomeStats) return;
+    const state = runner.state.dca;
+    const stream = DCA_STREAMS[state.activeStreamId];
+    const investedText =
+      state.totalContributed > 0
+        ? `Invested ${formatCurrency(state.totalContributed)}`
+        : "No contributions yet";
+    communityIncomeStats.innerHTML = `
+      <p class="local-income-panel__stats-stream">${stream?.name ?? "Community stream"}</p>
+      <p class="local-income-panel__stats-detail">${investedText} · Earned ${formatCurrency(
+        state.totalEarned
+      )}</p>
     `;
   };
 
@@ -2278,6 +2634,7 @@ export const initializeUI = (
     renderDcaActiveInfo();
     renderDcaOffers();
     renderDcaEventLog();
+    renderCommunityIncomeStats();
   };
 
   const updateBalanceCopyMessage = (): void => {
@@ -2644,6 +3001,14 @@ export const initializeUI = (
   container.querySelector("[data-action='trade-sell']")?.addEventListener("click", () => placeTrade("sell"));
   tradeSlider?.addEventListener("input", updateSliderValueDisplay);
   tradeTicker?.addEventListener("change", updateSelectionFromDropdown);
+  holdingsSortSelect?.addEventListener("change", () => {
+    const nextValue = holdingsSortSelect.value;
+    const nextMode: HoldingsSortMode = ["ticker", "value", "delta"].includes(nextValue)
+      ? (nextValue as HoldingsSortMode)
+      : "ticker";
+    holdingsSortMode = nextMode;
+    refreshHoldings();
+  });
   choiceAct?.addEventListener("click", () => {
     runner.resolveChoice(true);
     refreshAll();

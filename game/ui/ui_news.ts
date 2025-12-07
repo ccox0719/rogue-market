@@ -31,7 +31,7 @@ const trimModalRows = (modalBody: HTMLElement): void => {
   }
 };
 
-export const initializeNewsUI = (container: HTMLElement): NewsUIController => {
+export const initializeNewsUI = (container: ParentNode): NewsUIController => {
   const modal = container.querySelector<HTMLElement>("[data-role='news-modal']");
   const modalBody = container.querySelector<HTMLElement>("[data-role='news-modal-body']");
   const openButton = container.querySelector<HTMLButtonElement>("[data-action='open-news-modal']");
