@@ -89,7 +89,8 @@ export const initializeUI = (
   container.classList.add("app-shell");
   container.innerHTML = `
     <div class="view-shell">
-        <nav class="view-menu view-menu--collapsed">
+      <div class="view-stack">
+        <section class="panel view-menu view-menu--collapsed">
           <div class="view-menu__header">
             <span class="view-menu__title">Menu</span>
             <span class="view-menu__status">Run Dashboard</span>
@@ -120,8 +121,7 @@ export const initializeUI = (
               Dev Tools
             </button>
           </div>
-        </nav>
-      <div class="view-stack">
+        </section>
         <article class="view-page view-page--active" data-view="dashboard">
           <div class="dashboard-banner">
             <div class="ticker-tape" data-role="ticker-tape">
@@ -146,13 +146,6 @@ export const initializeUI = (
             </div>
           </div>
           <section class="panel buy-panel" data-panel="buy">
-            <header class="panel-header">
-              <h2>Buy Window</h2>
-              <div class="panel-header-actions">
-                <span class="autosave-status" data-role="autosave-status">Autosaved Day 42 - 03:01 PM</span>
-                <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
-              </div>
-            </header>
             <div class="panel-body">
               <div class="time-row">
                 <button type="button" data-action="advance-1">Advance 1 Day</button>
@@ -277,8 +270,6 @@ export const initializeUI = (
             </div>
           </section>
         </article>
-
-        <button type="button" class="story-toggle" data-action="toggle-story">Story: On</button>
 
         <article class="view-page" data-view="progression">
           <section class="panel meta-panel" data-panel="meta">
@@ -444,7 +435,8 @@ export const initializeUI = (
               <button type="button" class="panel-toggle" aria-expanded="true"><span>Hide</span></button>
             </header>
             <div class="panel-body">
-        <div class="dev-drawer__controls">
+              <button type="button" class="story-toggle" data-action="toggle-story">Story: On</button>
+              <div class="dev-drawer__controls">
           <div class="dev-drawer__section">
             <p class="dev-drawer__label">XP controls</p>
             <button type="button" data-action="dev-award-xp-small">+500 XP</button>
@@ -825,7 +817,7 @@ export const initializeUI = (
   const copyDifficultyButton = container.querySelector<HTMLButtonElement>("[data-action='dev-copy-difficulty-sliders']");
   const devWhaleCapitalSlidersContainer = container.querySelector<HTMLElement>("[data-role='dev-whale-capital-sliders']");
   const copyDevWhaleCapitalButton = container.querySelector<HTMLButtonElement>("[data-action='dev-copy-whale-capital']");
-  const storyContinueButton = container.querySelector<HTMLButtonElement>(
+  const storyContinueButton = document.querySelector<HTMLButtonElement>(
     "[data-action='story-continue']"
   );
   const watchFieldCash = container.querySelector<HTMLElement>("[data-watch='cash']");
@@ -1047,20 +1039,31 @@ export const initializeUI = (
 
   const openNextStoryEvent = () => {
     if (!storyEnabled) return;
-    const nextEvent = storyEventQueue.shift();
-    if (!nextEvent) {
-      activeStoryEvent = null;
-      hideStoryDialog();
+
+    while (storyEventQueue.length) {
+      const nextEvent = storyEventQueue.shift();
+      if (!nextEvent) {
+        break;
+      }
+      const nonEmptyLines = nextEvent.lines.filter(
+        (line) => (line ?? "").trim().length > 0
+      );
+      if (!nonEmptyLines.length) {
+        continue;
+      }
+
+      activeStoryEvent = { ...nextEvent, lines: nonEmptyLines };
+      activeStoryLineIndex = 0;
+      storyLine && (storyLine.textContent = nonEmptyLines[0]);
+      if (storyDialog) {
+        storyDialog.hidden = false;
+      }
+      document.body.classList.add(STORY_MODAL_CLASS);
       return;
     }
 
-    activeStoryEvent = nextEvent;
-    activeStoryLineIndex = 0;
-    storyLine && (storyLine.textContent = nextEvent.lines[0] ?? "");
-    if (storyDialog) {
-      storyDialog.hidden = false;
-    }
-    document.body.classList.add(STORY_MODAL_CLASS);
+    activeStoryEvent = null;
+    hideStoryDialog();
   };
 
   const advanceStoryLine = () => {
@@ -3143,6 +3146,18 @@ export const initializeUI = (
 
   storyContinueButton?.addEventListener("click", () => {
     advanceStoryLine();
+  });
+
+  storyDialog?.addEventListener("click", (event) => {
+    if (event.target === storyDialog) {
+      advanceStoryLine();
+    }
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      advanceStoryLine();
+    }
   });
 
   storyToggleButton?.addEventListener("click", () => {
