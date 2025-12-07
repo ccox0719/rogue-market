@@ -294,6 +294,17 @@ export class GameRunner {
         this.notifyMetaChange();
         this.logDevAction("Meta XP reset to 0.");
     }
+    clearPersistentRun() {
+        clearRun();
+        this.logDevAction("Persistent run save cleared.");
+    }
+    forcePersistState() {
+        saveRun(this.state);
+        saveMeta(this.metaState);
+        this.notifyMetaChange();
+        this.onSave?.(this.state);
+        this.logDevAction("Persistent save updated.");
+    }
     grantRandomArtifact() {
         if (this.state.runOver)
             return;

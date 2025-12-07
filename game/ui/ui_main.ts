@@ -452,6 +452,11 @@ export const initializeUI = (
             <button type="button" data-action="dev-reset-xp">Reset XP</button>
           </div>
           <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Save controls</p>
+            <button type="button" data-action="dev-save-update">Update persistent save</button>
+            <button type="button" data-action="dev-save-reset">Force reset persistent save</button>
+          </div>
+          <div class="dev-drawer__section">
             <p class="dev-drawer__label">Lifecycle controls</p>
             <button type="button" data-action="dev-trigger-ipo">Spawn IPO</button>
             <button type="button" data-action="dev-trigger-split">Force split</button>
@@ -844,6 +849,8 @@ export const initializeUI = (
   const devOpenDeliveryButton = container.querySelector<HTMLButtonElement>("[data-action='dev-open-delivery']");
   const devOpenPhoneButton = container.querySelector<HTMLButtonElement>("[data-action='dev-open-phone']");
   const devOpenGarageButton = container.querySelector<HTMLButtonElement>("[data-action='dev-open-garage']");
+  const devForceSaveButton = container.querySelector<HTMLButtonElement>("[data-action='dev-save-update']");
+  const devForceResetButton = container.querySelector<HTMLButtonElement>("[data-action='dev-save-reset']");
   const storyEventQueue: StorySceneEvent[] = [];
   let activeStoryEvent: StorySceneEvent | null = null;
   let activeStoryLineIndex = 0;
@@ -3219,6 +3226,16 @@ export const initializeUI = (
   devResetXpButton?.addEventListener("click", () => {
     runner.resetMetaXp();
     refreshAll();
+  });
+
+  devForceSaveButton?.addEventListener("click", () => {
+    runner.forcePersistState();
+    refreshAll();
+  });
+
+  devForceResetButton?.addEventListener("click", () => {
+    runner.clearPersistentRun();
+    window.location.reload();
   });
 
   bindWhaleBuyoutHandler(() => {
