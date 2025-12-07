@@ -1,5 +1,4 @@
-cd /Users/cox/Documents/Cosmo
-./scripts/backup.sh
+
 
 netlify deploy --prod
 

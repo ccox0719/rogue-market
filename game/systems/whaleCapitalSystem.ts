@@ -2,6 +2,20 @@ import type { GameState } from "../core/state.js";
 import type { WhaleInstance } from "../generators/whaleGen.js";
 import { findWhaleProfile } from "../generators/whaleGen.js";
 
+export interface WhaleCapitalModifiers {
+  volatilitySensitivity: number;
+  manipulationImpact: number;
+  backfireFactor: number;
+  leverage: number;
+}
+
+export const whaleCapitalModifiers: WhaleCapitalModifiers = {
+  volatilitySensitivity: 1,
+  manipulationImpact: 1,
+  backfireFactor: 1,
+  leverage: 1,
+};
+
 const computeSectorReturns = (state: GameState): Record<string, number> => {
   const sectorStats: Record<string, { sum: number; count: number }> = {};
 
@@ -50,19 +64,22 @@ export const updateWhaleCapital = (state: GameState): void => {
     if (!profile) continue;
 
     const weightedReturn = computeWeightedReturn(whale, sectorReturns);
-    const volatilitySensitivity = profile.capitalConfig?.volatilitySensitivity ?? 1;
+    const volatilitySensitivity =
+      (profile.capitalConfig?.volatilitySensitivity ?? 1) * whaleCapitalModifiers.volatilitySensitivity;
     let growthMultiplier = 1 + weightedReturn * volatilitySensitivity;
     if (growthMultiplier < 0.5) {
       growthMultiplier = 0.5;
     }
 
-    const leverage = whale.leverage ?? 1;
+    const leverage = (whale.leverage ?? 1) * whaleCapitalModifiers.leverage;
     const biasSign = Math.sign(profile.impactModel.sectorTrendDelta ?? 0) || 1;
     const targetSector = whale.targetSector ?? profile.favoriteSectors[0] ?? "";
     const targetReturn = sectorReturns[targetSector] ?? 0;
     const signedReturn = biasSign * targetReturn;
-    const manipulationImpact = profile.capitalConfig?.manipulationImpact ?? 0.25;
-    const backfireFactor = profile.capitalConfig?.backfireFactor ?? 0.12;
+    const manipulationImpact =
+      (profile.capitalConfig?.manipulationImpact ?? 0.25) * whaleCapitalModifiers.manipulationImpact;
+    const backfireFactor =
+      (profile.capitalConfig?.backfireFactor ?? 0.12) * whaleCapitalModifiers.backfireFactor;
     const manipulationProfit = Math.max(0, signedReturn) * manipulationImpact * whale.capital;
     const manipulationBackfire = Math.max(0, -signedReturn) * backfireFactor * whale.capital;
 

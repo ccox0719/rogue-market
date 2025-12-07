@@ -1,4 +1,10 @@
 import { findWhaleProfile } from "../generators/whaleGen.js";
+export const whaleCapitalModifiers = {
+    volatilitySensitivity: 1,
+    manipulationImpact: 1,
+    backfireFactor: 1,
+    leverage: 1,
+};
 const computeSectorReturns = (state) => {
     const sectorStats = {};
     for (const company of state.companies) {
@@ -40,18 +46,18 @@ export const updateWhaleCapital = (state) => {
         if (!profile)
             continue;
         const weightedReturn = computeWeightedReturn(whale, sectorReturns);
-        const volatilitySensitivity = profile.capitalConfig?.volatilitySensitivity ?? 1;
+        const volatilitySensitivity = (profile.capitalConfig?.volatilitySensitivity ?? 1) * whaleCapitalModifiers.volatilitySensitivity;
         let growthMultiplier = 1 + weightedReturn * volatilitySensitivity;
         if (growthMultiplier < 0.5) {
             growthMultiplier = 0.5;
         }
-        const leverage = whale.leverage ?? 1;
+        const leverage = (whale.leverage ?? 1) * whaleCapitalModifiers.leverage;
         const biasSign = Math.sign(profile.impactModel.sectorTrendDelta ?? 0) || 1;
         const targetSector = whale.targetSector ?? profile.favoriteSectors[0] ?? "";
         const targetReturn = sectorReturns[targetSector] ?? 0;
         const signedReturn = biasSign * targetReturn;
-        const manipulationImpact = profile.capitalConfig?.manipulationImpact ?? 0.25;
-        const backfireFactor = profile.capitalConfig?.backfireFactor ?? 0.12;
+        const manipulationImpact = (profile.capitalConfig?.manipulationImpact ?? 0.25) * whaleCapitalModifiers.manipulationImpact;
+        const backfireFactor = (profile.capitalConfig?.backfireFactor ?? 0.12) * whaleCapitalModifiers.backfireFactor;
         const manipulationProfit = Math.max(0, signedReturn) * manipulationImpact * whale.capital;
         const manipulationBackfire = Math.max(0, -signedReturn) * backfireFactor * whale.capital;
         const newCapital = Math.max(whale.capital * growthMultiplier * leverage + manipulationProfit - manipulationBackfire, 100000);

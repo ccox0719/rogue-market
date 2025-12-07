@@ -10,6 +10,7 @@ import { initializeMetaPanel } from "./ui_meta.js";
 import { bindWhaleBuyoutHandler, renderWhaleInfluenceBar } from "./whale-influence-ui.js";
 import { renderWhaleDialogue } from "./whale-dialogue-ui.js";
 import { renderWhalePortrait } from "./whale-portrait-ui.js";
+import { whaleCapitalModifiers } from "../systems/whaleCapitalSystem.js";
 import { CONFIG } from "../core/config.js";
 import { buyBondFromListing } from "../systems/bondSystem.js";
 import { findReactiveMicrocapCompany, recordReactiveMicrocapTrade, } from "../whales/reactiveMicrocap.js";
@@ -419,6 +420,13 @@ export const initializeUI = (runner, container, options = {}) => {
               Copy difficulty JSON
             </button>
           </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Whale capital modifiers</p>
+            <div class="dev-whale-capital-sliders" data-role="dev-whale-capital-sliders"></div>
+            <button type="button" data-action="dev-copy-whale-capital" class="panel-header__action">
+              Copy JSON
+            </button>
+          </div>
         </div>
       </div>
           </section>
@@ -744,6 +752,8 @@ export const initializeUI = (runner, container, options = {}) => {
     const copyDevBalanceButton = container.querySelector("[data-action='dev-copy-balance-sliders']");
     const difficultySlidersContainer = container.querySelector("[data-role='dev-difficulty-sliders']");
     const copyDifficultyButton = container.querySelector("[data-action='dev-copy-difficulty-sliders']");
+    const devWhaleCapitalSlidersContainer = container.querySelector("[data-role='dev-whale-capital-sliders']");
+    const copyDevWhaleCapitalButton = container.querySelector("[data-action='dev-copy-whale-capital']");
     const storyContinueButton = container.querySelector("[data-action='story-continue']");
     const watchFieldCash = container.querySelector("[data-watch='cash']");
     const watchFieldShares = container.querySelector("[data-watch='shares']");
@@ -2490,6 +2500,19 @@ export const initializeUI = (runner, container, options = {}) => {
         }
         failure();
     };
+    const copyDevWhaleCapital = () => {
+        const payload = JSON.stringify(whaleCapitalModifiers, null, 2);
+        const success = () => {
+            balanceCopyMessage = "Whale modifiers copied";
+            updateBalanceCopyMessage();
+        };
+        const failure = () => fallbackBalanceCopy(payload, "Whale capital modifiers");
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(payload).then(success, failure);
+            return;
+        }
+        failure();
+    };
     const renderDifficultySliders = () => {
         if (!difficultySlidersContainer)
             return;
@@ -2520,6 +2543,68 @@ export const initializeUI = (runner, container, options = {}) => {
             updateValue();
             row.append(label, slider, valueSpan);
             difficultySlidersContainer.appendChild(row);
+        });
+    };
+    const whaleCapitalSliderConfig = [
+        {
+            key: "volatilitySensitivity",
+            label: "Volatility sensitivity",
+            min: 0.5,
+            max: 2,
+            step: 0.05,
+        },
+        {
+            key: "manipulationImpact",
+            label: "Manipulation impact",
+            min: 0,
+            max: 2,
+            step: 0.05,
+        },
+        {
+            key: "backfireFactor",
+            label: "Backfire factor",
+            min: 0,
+            max: 2,
+            step: 0.05,
+        },
+        {
+            key: "leverage",
+            label: "Leverage multiplier",
+            min: 0.5,
+            max: 2,
+            step: 0.05,
+        },
+    ];
+    const renderDevWhaleCapitalSliders = () => {
+        if (!devWhaleCapitalSlidersContainer)
+            return;
+        devWhaleCapitalSlidersContainer.innerHTML = "";
+        whaleCapitalSliderConfig.forEach((config) => {
+            const row = document.createElement("div");
+            row.className = "dev-balance-slider";
+            const label = document.createElement("span");
+            label.textContent = `${config.label}`;
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = config.min.toString();
+            slider.max = config.max.toString();
+            slider.step = config.step.toString();
+            slider.value = String(whaleCapitalModifiers[config.key]);
+            const valueSpan = document.createElement("span");
+            valueSpan.className = "dev-balance-slider__value";
+            const updateValue = () => {
+                valueSpan.textContent = whaleCapitalModifiers[config.key].toFixed(2);
+            };
+            slider.addEventListener("input", () => {
+                const parsed = Number(slider.value);
+                if (!Number.isFinite(parsed))
+                    return;
+                whaleCapitalModifiers[config.key] = parsed;
+                updateValue();
+            });
+            updateValue();
+            row.append(label, slider, valueSpan);
+            devWhaleCapitalSlidersContainer.appendChild(row);
         });
     };
     const copyDifficultySliders = () => {
@@ -2626,6 +2711,7 @@ export const initializeUI = (runner, container, options = {}) => {
     setupBalancePanel();
     renderDevBalanceSliders();
     renderDifficultySliders();
+    renderDevWhaleCapitalSliders();
     updateWhaleLogMessage();
     const refreshLocalIncomePanel = () => {
         if (!localIncomePanel || !localIncomeEventList) {
@@ -2774,6 +2860,7 @@ export const initializeUI = (runner, container, options = {}) => {
     copyWhaleLogButton?.addEventListener("click", () => copyWhaleLog());
     copyDevBalanceButton?.addEventListener("click", () => copyDevBalanceSliders());
     copyDifficultyButton?.addEventListener("click", () => copyDifficultySliders());
+    copyDevWhaleCapitalButton?.addEventListener("click", () => copyDevWhaleCapital());
     storyContinueButton?.addEventListener("click", () => {
         advanceStoryLine();
     });

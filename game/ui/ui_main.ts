@@ -26,6 +26,7 @@ import { initializeMetaPanel } from "./ui_meta.js";
 import { bindWhaleBuyoutHandler, renderWhaleInfluenceBar } from "./whale-influence-ui.js";
 import { renderWhaleDialogue } from "./whale-dialogue-ui.js";
 import { renderWhalePortrait, setWhaleSpeaking } from "./whale-portrait-ui.js";
+import { whaleCapitalModifiers, type WhaleCapitalModifiers } from "../systems/whaleCapitalSystem.js";
 import { CONFIG } from "../core/config.js";
 import { buyBondFromListing } from "../systems/bondSystem.js";
 import {
@@ -476,6 +477,13 @@ export const initializeUI = (
               Copy difficulty JSON
             </button>
           </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Whale capital modifiers</p>
+            <div class="dev-whale-capital-sliders" data-role="dev-whale-capital-sliders"></div>
+            <button type="button" data-action="dev-copy-whale-capital" class="panel-header__action">
+              Copy JSON
+            </button>
+          </div>
         </div>
       </div>
           </section>
@@ -810,6 +818,8 @@ export const initializeUI = (
   const copyDevBalanceButton = container.querySelector<HTMLButtonElement>("[data-action='dev-copy-balance-sliders']");
   const difficultySlidersContainer = container.querySelector<HTMLElement>("[data-role='dev-difficulty-sliders']");
   const copyDifficultyButton = container.querySelector<HTMLButtonElement>("[data-action='dev-copy-difficulty-sliders']");
+  const devWhaleCapitalSlidersContainer = container.querySelector<HTMLElement>("[data-role='dev-whale-capital-sliders']");
+  const copyDevWhaleCapitalButton = container.querySelector<HTMLButtonElement>("[data-action='dev-copy-whale-capital']");
   const storyContinueButton = container.querySelector<HTMLButtonElement>(
     "[data-action='story-continue']"
   );
@@ -2716,6 +2726,20 @@ export const initializeUI = (
     failure();
   };
 
+  const copyDevWhaleCapital = (): void => {
+    const payload = JSON.stringify(whaleCapitalModifiers, null, 2);
+    const success = () => {
+      balanceCopyMessage = "Whale modifiers copied";
+      updateBalanceCopyMessage();
+    };
+    const failure = () => fallbackBalanceCopy(payload, "Whale capital modifiers");
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(payload).then(success, failure);
+      return;
+    }
+    failure();
+  };
+
   const renderDifficultySliders = (): void => {
     if (!difficultySlidersContainer) return;
     difficultySlidersContainer.innerHTML = "";
@@ -2744,6 +2768,74 @@ export const initializeUI = (
       updateValue();
       row.append(label, slider, valueSpan);
       difficultySlidersContainer.appendChild(row);
+    });
+  };
+
+  const whaleCapitalSliderConfig: Array<{
+    key: keyof WhaleCapitalModifiers;
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+  }> = [
+    {
+      key: "volatilitySensitivity",
+      label: "Volatility sensitivity",
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+    },
+    {
+      key: "manipulationImpact",
+      label: "Manipulation impact",
+      min: 0,
+      max: 2,
+      step: 0.05,
+    },
+    {
+      key: "backfireFactor",
+      label: "Backfire factor",
+      min: 0,
+      max: 2,
+      step: 0.05,
+    },
+    {
+      key: "leverage",
+      label: "Leverage multiplier",
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+    },
+  ];
+
+  const renderDevWhaleCapitalSliders = (): void => {
+    if (!devWhaleCapitalSlidersContainer) return;
+    devWhaleCapitalSlidersContainer.innerHTML = "";
+    whaleCapitalSliderConfig.forEach((config) => {
+      const row = document.createElement("div");
+      row.className = "dev-balance-slider";
+      const label = document.createElement("span");
+      label.textContent = `${config.label}`;
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = config.min.toString();
+      slider.max = config.max.toString();
+      slider.step = config.step.toString();
+      slider.value = String(whaleCapitalModifiers[config.key]);
+      const valueSpan = document.createElement("span");
+      valueSpan.className = "dev-balance-slider__value";
+      const updateValue = () => {
+        valueSpan.textContent = whaleCapitalModifiers[config.key].toFixed(2);
+      };
+      slider.addEventListener("input", () => {
+        const parsed = Number(slider.value);
+        if (!Number.isFinite(parsed)) return;
+        whaleCapitalModifiers[config.key] = parsed;
+        updateValue();
+      });
+      updateValue();
+      row.append(label, slider, valueSpan);
+      devWhaleCapitalSlidersContainer.appendChild(row);
     });
   };
 
@@ -2859,6 +2951,7 @@ export const initializeUI = (
   setupBalancePanel();
   renderDevBalanceSliders();
   renderDifficultySliders();
+  renderDevWhaleCapitalSliders();
   updateWhaleLogMessage();
 
   const refreshLocalIncomePanel = (): void => {
@@ -3039,6 +3132,7 @@ export const initializeUI = (
   copyWhaleLogButton?.addEventListener("click", () => copyWhaleLog());
   copyDevBalanceButton?.addEventListener("click", () => copyDevBalanceSliders());
   copyDifficultyButton?.addEventListener("click", () => copyDifficultySliders());
+  copyDevWhaleCapitalButton?.addEventListener("click", () => copyDevWhaleCapital());
 
   storyContinueButton?.addEventListener("click", () => {
     advanceStoryLine();
