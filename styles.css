@@ -734,6 +734,101 @@ body {
   color: #a6dff9;
 }
 
+.panel-header__action {
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.whale-log-status {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+  min-width: 140px;
+  text-align: right;
+}
+
+.dev-panel {
+  background: var(--bg-panel);
+}
+
+.dev-drawer__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dev-drawer__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dev-drawer__section button {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dev-drawer__section button:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dev-balance-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dev-balance-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.75rem;
+}
+
+.dev-balance-slider span {
+  min-width: 110px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dev-balance-slider input[type="range"] {
+  flex: 1;
+}
+
+.dev-difficulty-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dev-difficulty-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.75rem;
+}
+
+.dev-difficulty-slider span {
+  min-width: 110px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dev-difficulty-slider input[type="range"] {
+  flex: 1;
+}
+
 .time-row {
   display: flex;
   gap: 0.65rem;
@@ -1927,6 +2022,112 @@ body {
     font-weight: 600;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.8);
+  }
+
+  .balance-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 10, 30, 0.85);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .balance-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .balance-panel__header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .balance-panel__header p {
+    margin: 0;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .balance-panel__tag {
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+  }
+
+  .balance-panel__message {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.65);
+    min-height: 1.2rem;
+  }
+
+  .balance-panel__levels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .balance-panel__level {
+    padding: 0.65rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .balance-panel__level-header strong {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .balance-panel__level-header p {
+    margin: 0;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .balance-panel__lever-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .balance-panel__lever-row span {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .balance-panel__lever-row input {
+    width: 90px;
+    border-radius: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(4, 8, 20, 0.9);
+    color: #fff;
+    padding: 0.2rem 0.4rem;
+    text-align: right;
+  }
+
+  .balance-panel__copy {
+    align-self: flex-end;
+    border: none;
+    border-radius: 0.65rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #63f2ff, #3d9ffd);
+    color: #041026;
+    cursor: pointer;
   }
 
   .local-income-panel .bond-market-section {

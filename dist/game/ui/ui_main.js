@@ -14,6 +14,8 @@ import { CONFIG } from "../core/config.js";
 import { buyBondFromListing } from "../systems/bondSystem.js";
 import { findReactiveMicrocapCompany, recordReactiveMicrocapTrade, } from "../whales/reactiveMicrocap.js";
 import { localIncomeDefinitions } from "../systems/localIncomeSystem.js";
+import balanceLevels from "../content/balanceLevels.js";
+import difficultyModes from "../content/difficultyModes.js";
 import { DCA_STREAMS, setActiveDCAStream, setDCADailyContribution, } from "../simulation/dca.js";
 import { recordLifecycleEvent } from "../systems/lifecycleSystem.js";
 import { launchDeliveryTimingMiniGame } from "../minigames/deliveryTiming.js";
@@ -339,7 +341,15 @@ export const initializeUI = (runner, container, options = {}) => {
         <article class="view-page" data-view="whales">
           <section class="panel whale-panel" data-panel="whale">
             <header class="panel-header">
-              <h2>Whale Watch</h2>
+              <div>
+                <h2>Whale Watch</h2>
+              </div>
+              <div class="panel-header-actions">
+                <span class="whale-log-status" data-role="whale-log-message"></span>
+                <button type="button" class="panel-header__action" data-action="copy-whale-log">
+                  Copy Whale Log
+                </button>
+              </div>
               <span data-role="whale-panel-day">Day 1</span>
             </header>
             <div class="panel-body">
@@ -409,6 +419,20 @@ export const initializeUI = (runner, container, options = {}) => {
             <button type="button" data-action="dev-open-delivery">Launch Delivery Timing</button>
             <button type="button" data-action="dev-open-phone">Launch Phone Unlock</button>
             <button type="button" data-action="dev-open-garage">Launch Garage Cleanout</button>
+          </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Balance sliders</p>
+            <div class="dev-balance-sliders" data-role="dev-balance-sliders"></div>
+            <button type="button" data-action="dev-copy-balance-sliders" class="panel-header__action">
+              Copy slider JSON
+            </button>
+          </div>
+          <div class="dev-drawer__section">
+            <p class="dev-drawer__label">Difficulty sliders</p>
+            <div class="dev-difficulty-sliders" data-role="dev-difficulty-sliders"></div>
+            <button type="button" data-action="dev-copy-difficulty-sliders" class="panel-header__action">
+              Copy difficulty JSON
+            </button>
           </div>
         </div>
       </div>
@@ -694,6 +718,7 @@ export const initializeUI = (runner, container, options = {}) => {
     const reactiveMicrocapMarketCap = container.querySelector("[data-role='reactive-microcap-marketcap']");
     const reactiveMicrocapInfluence = container.querySelector("[data-role='reactive-microcap-influence']");
     const localIncomePanel = container.querySelector("[data-role='local-income-panel']");
+    const localIncomeStreams = container.querySelector("[data-role='local-income-streams']");
     const localIncomeEventList = container.querySelector("[data-role='local-income-event-list']");
     const dcaEventList = container.querySelector("[data-role='dca-event-list']");
     const sideHustleModal = container.querySelector("[data-role='side-hustle-modal']");
@@ -709,6 +734,14 @@ export const initializeUI = (runner, container, options = {}) => {
     const storyLine = container.querySelector("[data-role='story-line']");
     const dcaOffersContainer = container.querySelector("[data-role='dca-offers']");
     const dcaActiveInfo = container.querySelector("[data-role='dca-active']");
+    const balanceLevelsContainer = container.querySelector("[data-role='balance-levels']");
+    const balanceCopyMessageEl = container.querySelector("[data-role='balance-copy-message']");
+    const whaleLogMessageEl = container.querySelector("[data-role='whale-log-message']");
+    const copyWhaleLogButton = container.querySelector("[data-action='copy-whale-log']");
+    const devBalanceSlidersContainer = container.querySelector("[data-role='dev-balance-sliders']");
+    const copyDevBalanceButton = container.querySelector("[data-action='dev-copy-balance-sliders']");
+    const difficultySlidersContainer = container.querySelector("[data-role='dev-difficulty-sliders']");
+    const copyDifficultyButton = container.querySelector("[data-action='dev-copy-difficulty-sliders']");
     const storyContinueButton = container.querySelector("[data-action='story-continue']");
     const watchFieldCash = container.querySelector("[data-watch='cash']");
     const watchFieldShares = container.querySelector("[data-watch='shares']");
@@ -746,6 +779,38 @@ export const initializeUI = (runner, container, options = {}) => {
     };
     const dcaStreamsList = Object.values(DCA_STREAMS);
     const dcaStreamsByName = new Map(dcaStreamsList.map((stream) => [stream.name, stream]));
+    const editableBalanceLevels = balanceLevels.map((entry) => ({
+        ...entry,
+        values: { ...entry.values },
+    }));
+    const balanceLeverKeys = [
+        "volatilityScale",
+        "eventScale",
+        "whaleScale",
+        "whaleCap",
+        "maxWhalesPerSector",
+        "metaRampBoost",
+        "bondProfitScale",
+        "communityFundScale",
+        "sideHustleChance",
+    ];
+    const balanceLeverConfig = {
+        volatilityScale: { label: "Volatility scale", step: 0.05, min: 0.5, max: 2 },
+        eventScale: { label: "Event scale", step: 0.05, min: 0.5, max: 2 },
+        whaleScale: { label: "Whale scale", step: 0.05, min: 0, max: 1.5 },
+        whaleCap: { label: "Whale cap (%)", step: 0.05, min: 0, max: 1 },
+        maxWhalesPerSector: { label: "Max whales/sector", step: 1, min: 1, max: 4 },
+        metaRampBoost: { label: "Meta ramp boost", step: 0.05, min: 0.5, max: 1.2 },
+        bondProfitScale: { label: "Bond profit scale", step: 0.05, min: 0.5, max: 2 },
+        communityFundScale: { label: "Community fund scale", step: 0.05, min: 0.5, max: 2 },
+        sideHustleChance: { label: "Side hustle chance", step: 0.05, min: 0.5, max: 1.5 },
+    };
+    let balanceCopyMessage = "";
+    const difficultyScaleState = difficultyModes.reduce((acc, mode) => {
+        acc[mode.id] = 1;
+        return acc;
+    }, {});
+    const devBalanceState = { ...balanceLevels[1].values };
     let lastOfferMessage = "";
     const storyToggleButton = container.querySelector("[data-action='toggle-story']");
     const STORY_TOGGLE_KEY = "rogue-market-story-enabled";
@@ -1477,6 +1542,7 @@ export const initializeUI = (runner, container, options = {}) => {
         refreshCompanyStats();
     };
     const getCompanyByTicker = (ticker) => runner.state.companies.find((company) => company.ticker === ticker);
+    const getCompanyById = (id) => id ? runner.state.companies.find((company) => company.id === id) : undefined;
     const getMaxBuyQuantity = (company) => Math.floor(runner.state.portfolio.cash / (company?.price ?? 1));
     const getMaxSellQuantity = (company) => company ? runner.state.portfolio.holdings[company.ticker] ?? 0 : 0;
     const updateTradeSliderLimits = () => {
@@ -2011,6 +2077,220 @@ export const initializeUI = (runner, container, options = {}) => {
         renderDcaOffers();
         renderDcaEventLog();
     };
+    const updateBalanceCopyMessage = () => {
+        if (!balanceCopyMessageEl)
+            return;
+        balanceCopyMessageEl.textContent = balanceCopyMessage;
+    };
+    const fallbackBalanceCopy = (text, label) => {
+        if (typeof window !== "undefined" && window.prompt) {
+            window.prompt(`Copy the ${label} config`, text);
+        }
+        balanceCopyMessage = `${label} config ready to paste`;
+        updateBalanceCopyMessage();
+    };
+    const copyBalanceLevel = (level) => {
+        const payload = JSON.stringify(level.values, null, 2);
+        const successMessage = () => {
+            balanceCopyMessage = `${level.label} copied to clipboard`;
+            updateBalanceCopyMessage();
+        };
+        const failureMessage = () => fallbackBalanceCopy(payload, level.label);
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(payload).then(successMessage, failureMessage);
+            return;
+        }
+        failureMessage();
+    };
+    const renderDevBalanceSliders = () => {
+        if (!devBalanceSlidersContainer)
+            return;
+        devBalanceSlidersContainer.innerHTML = "";
+        balanceLeverKeys.forEach((key) => {
+            const config = balanceLeverConfig[key];
+            const row = document.createElement("div");
+            row.className = "dev-difficulty-slider";
+            const label = document.createElement("span");
+            label.textContent = config.label;
+            const slider = document.createElement("input");
+            slider.type = "range";
+            const min = config.min ?? 0;
+            const max = config.max ?? 2;
+            slider.min = min.toString();
+            slider.max = max.toString();
+            slider.step = config.step.toString();
+            slider.value = String(devBalanceState[key]);
+            const valueSpan = document.createElement("span");
+            valueSpan.className = "dev-balance-slider__value";
+            const updateValue = () => {
+                const display = key === "maxWhalesPerSector"
+                    ? String(Math.round(devBalanceState[key]))
+                    : devBalanceState[key].toFixed(2);
+                valueSpan.textContent = display;
+            };
+            slider.addEventListener("input", () => {
+                const parsed = Number(slider.value);
+                if (!Number.isFinite(parsed))
+                    return;
+                devBalanceState[key] =
+                    key === "maxWhalesPerSector" ? Math.round(parsed) : parsed;
+                updateValue();
+            });
+            updateValue();
+            row.append(label, slider, valueSpan);
+            devBalanceSlidersContainer.appendChild(row);
+        });
+    };
+    const copyDevBalanceSliders = () => {
+        const payload = JSON.stringify(devBalanceState, null, 2);
+        const success = () => {
+            balanceCopyMessage = "Dev slider config copied";
+            updateBalanceCopyMessage();
+        };
+        const failure = () => fallbackBalanceCopy(payload, "Dev sliders");
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(payload).then(success, failure);
+            return;
+        }
+        failure();
+    };
+    const renderDifficultySliders = () => {
+        if (!difficultySlidersContainer)
+            return;
+        difficultySlidersContainer.innerHTML = "";
+        difficultyModes.forEach((mode) => {
+            const row = document.createElement("div");
+            row.className = "dev-balance-slider";
+            const label = document.createElement("span");
+            label.textContent = mode.label;
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = "0.5";
+            slider.max = "1.5";
+            slider.step = "0.05";
+            slider.value = String(difficultyScaleState[mode.id] ?? 1);
+            const valueSpan = document.createElement("span");
+            valueSpan.className = "dev-balance-slider__value";
+            const updateValue = () => {
+                valueSpan.textContent = difficultyScaleState[mode.id].toFixed(2);
+            };
+            slider.addEventListener("input", () => {
+                const parsed = Number(slider.value);
+                if (!Number.isFinite(parsed))
+                    return;
+                difficultyScaleState[mode.id] = parsed;
+                updateValue();
+            });
+            updateValue();
+            row.append(label, slider, valueSpan);
+            difficultySlidersContainer.appendChild(row);
+        });
+    };
+    const copyDifficultySliders = () => {
+        const payload = JSON.stringify(difficultyScaleState, null, 2);
+        const success = () => {
+            balanceCopyMessage = "Difficulty slider config copied";
+            updateBalanceCopyMessage();
+        };
+        const failure = () => fallbackBalanceCopy(payload, "Difficulty sliders");
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(payload).then(success, failure);
+            return;
+        }
+        failure();
+    };
+    let whaleLogMessage = "Shareable log will appear here.";
+    const updateWhaleLogMessage = (text) => {
+        if (!whaleLogMessageEl)
+            return;
+        if (text) {
+            whaleLogMessage = text;
+        }
+        whaleLogMessageEl.textContent = whaleLogMessage;
+    };
+    const fallbackWhaleCopy = (text) => {
+        if (typeof window !== "undefined" && window.prompt) {
+            window.prompt("Copy the whale log", text);
+        }
+        updateWhaleLogMessage("Whale log ready to paste.");
+    };
+    const formatWhaleLog = () => {
+        const dayStamp = `Day ${runner.state.day} Whale Log`;
+        if (runner.state.activeWhales.length === 0) {
+            return `${dayStamp}\nNo active whales today.`;
+        }
+        const entries = runner.state.activeWhales.map((whale) => {
+            const profile = findWhaleProfile(whale.profileId);
+            const company = getCompanyById(whale.targetCompanyId);
+            const companyLabel = company ? company.ticker : "market";
+            const obsessions = whale.obsession.length ? whale.obsession.join(" > ") : "n/a";
+            const sectorLabel = whale.targetSector ?? "n/a";
+            return `${profile?.displayName ?? whale.profileId}: Capital ${formatCurrency(whale.capital)}, Sector ${sectorLabel}, Target ${companyLabel}, Obsessed with ${obsessions}`;
+        });
+        return [dayStamp, ...entries].join("\n");
+    };
+    const copyWhaleLog = () => {
+        const payload = formatWhaleLog();
+        const success = () => updateWhaleLogMessage("Whale log copied to clipboard.");
+        const failure = () => fallbackWhaleCopy(payload);
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(payload).then(success, failure);
+            return;
+        }
+        failure();
+    };
+    const setupBalancePanel = () => {
+        if (!balanceLevelsContainer)
+            return;
+        balanceLevelsContainer.innerHTML = "";
+        editableBalanceLevels.forEach((level) => {
+            const card = document.createElement("div");
+            card.className = "balance-panel__level";
+            const header = document.createElement("div");
+            header.className = "balance-panel__level-header";
+            header.innerHTML = `<strong>${level.label}</strong><p>${level.description}</p>`;
+            card.appendChild(header);
+            balanceLeverKeys.forEach((key) => {
+                const config = balanceLeverConfig[key];
+                const row = document.createElement("div");
+                row.className = "balance-panel__lever-row";
+                const label = document.createElement("span");
+                label.textContent = config.label;
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = config.step.toString();
+                input.value = String(level.values[key]);
+                if (config.min !== undefined)
+                    input.min = config.min.toString();
+                if (config.max !== undefined)
+                    input.max = config.max.toString();
+                input.addEventListener("input", () => {
+                    const parsed = Number(input.value);
+                    if (!Number.isFinite(parsed))
+                        return;
+                    level.values[key] =
+                        key === "maxWhalesPerSector"
+                            ? Math.max(config.min ?? 1, Math.round(parsed))
+                            : Math.min(config.max ?? parsed, Math.max(config.min ?? parsed, parsed));
+                });
+                row.appendChild(label);
+                row.appendChild(input);
+                card.appendChild(row);
+            });
+            const copyButton = document.createElement("button");
+            copyButton.type = "button";
+            copyButton.className = "balance-panel__copy";
+            copyButton.textContent = "Copy JSON";
+            copyButton.addEventListener("click", () => copyBalanceLevel(level));
+            card.appendChild(copyButton);
+            balanceLevelsContainer.appendChild(card);
+        });
+        updateBalanceCopyMessage();
+    };
+    setupBalancePanel();
+    renderDevBalanceSliders();
+    renderDifficultySliders();
+    updateWhaleLogMessage();
     const refreshLocalIncomePanel = () => {
         if (!localIncomePanel || !localIncomeEventList) {
             return;
@@ -2147,6 +2427,9 @@ export const initializeUI = (runner, container, options = {}) => {
             closeSideHustleModal();
         }
     });
+    copyWhaleLogButton?.addEventListener("click", () => copyWhaleLog());
+    copyDevBalanceButton?.addEventListener("click", () => copyDevBalanceSliders());
+    copyDifficultyButton?.addEventListener("click", () => copyDifficultySliders());
     storyContinueButton?.addEventListener("click", () => {
         advanceStoryLine();
     });

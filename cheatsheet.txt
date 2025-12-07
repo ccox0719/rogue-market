@@ -13,3 +13,73 @@ next edits:
 
 note: remember to rebuild with `npm run export-pages` and commit the generated `dist/` folder so the published site contains the runtime bundles for the simulation modules.
 
+Now you can remove this on the dashboard:Balance Levels
+Adjust the same levers used by difficulty and paste the JSON into config.
+
+Tunable
+Novice tuning
+Soft whales, slightly dampened volatility, and friendly events.
+
+Volatility scale
+0.85
+Event scale
+0.9
+Whale scale
+0.4
+Whale cap (%)
+0.45
+Max whales/sector
+1
+Meta ramp boost
+0.8
+Bond profit scale
+0.8
+Community fund scale
+0.9
+Side hustle chance
+0.7
+Copy JSON
+Classic tuning
+Baseline experience with guarded whales and steady volatility.
+
+Volatility scale
+1
+Event scale
+1
+Whale scale
+0.7
+Whale cap (%)
+0.5
+Max whales/sector
+2
+Meta ramp boost
+0.9
+Bond profit scale
+1
+Community fund scale
+1
+Side hustle chance
+1
+Copy JSON
+Iron tuning
+Full challenge with bundles of whales and stronger volatility bursts.
+
+Volatility scale
+1.2
+Event scale
+1.15
+Whale scale
+1
+Whale cap (%)
+0.6
+Max whales/sector
+2
+Meta ramp boost
+1
+Bond profit scale
+1.1
+Community fund scale
+1
+Side hustle chance
+1.15
+Copy JSON
