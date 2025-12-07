@@ -26,7 +26,7 @@ const deriveWeightsFromFavorites = (favorites) => {
 };
 const configureWhaleCapital = (instance, profile) => {
     const config = profile.capitalConfig ?? {};
-    const startingCapital = config.startingCapital ?? 3500000;
+    const startingCapital = config.startingCapital ?? 3_500_000;
     const leverage = config.leverage ?? 1;
     const weights = config.sectorWeights && Object.keys(config.sectorWeights).length > 0
         ? normalizeWeights(config.sectorWeights)

@@ -60,7 +60,7 @@ export const updateWhaleCapital = (state) => {
         const backfireFactor = (profile.capitalConfig?.backfireFactor ?? 0.12) * whaleCapitalModifiers.backfireFactor;
         const manipulationProfit = Math.max(0, signedReturn) * manipulationImpact * whale.capital;
         const manipulationBackfire = Math.max(0, -signedReturn) * backfireFactor * whale.capital;
-        const newCapital = Math.max(whale.capital * growthMultiplier * leverage + manipulationProfit - manipulationBackfire, 100000);
+        const newCapital = Math.max(whale.capital * growthMultiplier * leverage + manipulationProfit - manipulationBackfire, 100_000);
         whale.capital = Number(newCapital.toFixed(0));
         whale.capitalHistory.push(whale.capital);
     }

@@ -16,7 +16,7 @@ const whaleDefinitions = [
             companyTrendDelta: 0.02,
         },
         capitalConfig: {
-            startingCapital: 4000000,
+            startingCapital: 4_000_000,
             leverage: 1.1,
             volatilitySensitivity: 0.8,
             manipulationImpact: 0.18,
@@ -44,7 +44,7 @@ const whaleDefinitions = [
             companyTrendDelta: 0.025,
         },
         capitalConfig: {
-            startingCapital: 3800000,
+            startingCapital: 3_800_000,
             leverage: 1.3,
             volatilitySensitivity: 1.2,
             manipulationImpact: 0.3,
@@ -73,7 +73,7 @@ const whaleDefinitions = [
             companyTrendDelta: -0.022,
         },
         capitalConfig: {
-            startingCapital: 3600000,
+            startingCapital: 3_600_000,
             leverage: 1.4,
             volatilitySensitivity: 1.4,
             manipulationImpact: 0.32,
@@ -101,7 +101,7 @@ const whaleDefinitions = [
             companyTrendDelta: 0.02,
         },
         capitalConfig: {
-            startingCapital: 3200000,
+            startingCapital: 3_200_000,
             leverage: 1,
             volatilitySensitivity: 0.9,
             manipulationImpact: 0.22,
@@ -129,7 +129,7 @@ const whaleDefinitions = [
             companyTrendDelta: 0.015,
         },
         capitalConfig: {
-            startingCapital: 3700000,
+            startingCapital: 3_700_000,
             leverage: 1.05,
             volatilitySensitivity: 1.0,
             manipulationImpact: 0.2,

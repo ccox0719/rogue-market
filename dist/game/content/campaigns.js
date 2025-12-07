@@ -4,7 +4,7 @@ const campaigns = [
         name: "Rookie Sprint",
         description: "Build confidence before the big leagues.",
         objective: "Reach Aú 5,000 before Day 15.",
-        targetPortfolio: 5000,
+        targetPortfolio: 5_000,
         dayLimit: 15,
         modifiers: {
             startingCashMult: 1,
@@ -17,7 +17,7 @@ const campaigns = [
         name: "Growth Challenge",
         description: "Sectors swing harder. Momentum reading becomes essential.",
         objective: "Finish with Aú 12,000 before Day 25.",
-        targetPortfolio: 12000,
+        targetPortfolio: 12_000,
         dayLimit: 25,
         modifiers: {
             startingCashMult: 1.1,
@@ -30,7 +30,7 @@ const campaigns = [
         name: "Whale Hunter",
         description: "Identify and ride whale-driven movements before they hit.",
         objective: "Hold a peak of Aú 18,000 and survive Day 30.",
-        targetPortfolio: 18000,
+        targetPortfolio: 18_000,
         dayLimit: 30,
         modifiers: {
             startingCashMult: 1.25,

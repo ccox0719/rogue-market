@@ -1,8 +1,8 @@
 import { portfolioValue } from "./portfolioSystem.js";
 export const UNLOCK_THRESHOLDS = [
-    { value: 5000, tool: "sectorView" },
-    { value: 15000, tool: "options" },
-    { value: 40000, tool: "insiderTips" },
+    { value: 5_000, tool: "sectorView" },
+    { value: 15_000, tool: "options" },
+    { value: 40_000, tool: "insiderTips" },
 ];
 export const checkUnlocks = (state) => {
     const value = portfolioValue(state);

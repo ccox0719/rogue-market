@@ -29,9 +29,9 @@ import { applyWhaleBuyout, applyWhaleCollapseIfNeeded, } from "../whales/whale-d
 import { applyStorySceneEffects } from "../../story/story-effects.js";
 import { pickRandomMiniGameEvent } from "../minigames/eventLibrary.js";
 const ARTIFACT_UNLOCK_TIERS = [
-    { value: 5000, artifactId: "neon_compass" },
-    { value: 15000, artifactId: "rumor_network" },
-    { value: 40000, artifactId: "solar_mirrors" },
+    { value: 5_000, artifactId: "neon_compass" },
+    { value: 15_000, artifactId: "rumor_network" },
+    { value: 40_000, artifactId: "solar_mirrors" },
 ];
 const ARTIFACT_REWARD_DAYS = [5, 10, 20];
 const ERA_MUTATIONS = {
@@ -47,11 +47,20 @@ const MINI_GAME_MAX_CHANCE = 0.18;
 const MINI_GAME_LEVEL_BONUS = 0.005;
 const DCA_EVENT_LOG_LIMIT = 8;
 export class GameRunner {
+    state;
+    rng;
+    difficulty;
+    finalised = false;
+    onMetaUpdate;
+    metaState;
+    onSave;
+    campaignId;
+    challengeId;
+    artifactRewardMilestones = new Set();
+    rewardChoiceCount = 3;
+    startingArtifactGranted = false;
+    storyRunner;
     constructor(options = {}) {
-        this.finalised = false;
-        this.artifactRewardMilestones = new Set();
-        this.rewardChoiceCount = 3;
-        this.startingArtifactGranted = false;
         this.metaState = options.metaState ?? defaultMetaState;
         const fallbackCampaignId = this.metaState.activeCampaignId ?? campaignLibrary[0]?.id ?? null;
         const desiredCampaignId = options.campaignId ?? fallbackCampaignId;

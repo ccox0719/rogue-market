@@ -1,6 +1,6 @@
 import difficultyModes from "../content/difficultyModes.js";
 export const CONFIG = {
-    START_CASH: 1000,
+    START_CASH: 1_000,
     DAYS_PER_RUN: 30,
     VOLATILITY_RANGE: [0.01, 0.20],
     TREND_BIAS_RANGE: [-0.02, 0.05],
@@ -46,7 +46,7 @@ export const CONFIG = {
     REACTIVE_MICROCAP_VOLATILITY_RANGE: [0.25, 0.6],
     REACTIVE_MICROCAP_RANDOMNESS_RANGE: [0.1, 0.25],
     REACTIVE_MICROCAP_TREND_BIAS_RANGE: [0.03, 0.08],
-    REACTIVE_MICROCAP_MARKET_CAP_RANGE: [6000000, 80000000],
+    REACTIVE_MICROCAP_MARKET_CAP_RANGE: [6_000_000, 80_000_000],
 };
 const difficultyMap = new Map(CONFIG.DIFFICULTY_MODES.map((entry) => [entry.id, entry]));
 export const getDifficultyMode = (id) => difficultyMap.get(id ?? CONFIG.DEFAULT_DIFFICULTY) ??

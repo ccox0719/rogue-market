@@ -1,11 +1,12 @@
 import { narrativeWhales, } from "../content/narrative.js";
 export class WhaleManager {
+    whales;
+    activeWhaleId = null;
+    lastSignatureMoveDay = 0;
+    lastSignatureWhaleId = null;
+    lastLogDay = 0;
     constructor(whales = narrativeWhales) {
         this.whales = whales;
-        this.activeWhaleId = null;
-        this.lastSignatureMoveDay = 0;
-        this.lastSignatureWhaleId = null;
-        this.lastLogDay = 0;
     }
     applyWhales(ctx, rng) {
         const roll = rng ? () => rng.next() : Math.random;
