@@ -2867,8 +2867,11 @@ export const initializeUI = (runner, container, options = {}) => {
     copyDevBalanceButton?.addEventListener("click", () => copyDevBalanceSliders());
     copyDifficultyButton?.addEventListener("click", () => copyDifficultySliders());
     copyDevWhaleCapitalButton?.addEventListener("click", () => copyDevWhaleCapital());
-    storyContinueButton?.addEventListener("click", () => {
-        advanceStoryLine();
+    ["click", "touchend"].forEach((eventName) => {
+        storyContinueButton?.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            advanceStoryLine();
+        });
     });
     storyDialog?.addEventListener("click", (event) => {
         if (event.target === storyDialog) {

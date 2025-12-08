@@ -3144,8 +3144,11 @@ export const initializeUI = (
   copyDifficultyButton?.addEventListener("click", () => copyDifficultySliders());
   copyDevWhaleCapitalButton?.addEventListener("click", () => copyDevWhaleCapital());
 
-  storyContinueButton?.addEventListener("click", () => {
-    advanceStoryLine();
+  ["click", "touchend"].forEach((eventName) => {
+    storyContinueButton?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      advanceStoryLine();
+    });
   });
 
   storyDialog?.addEventListener("click", (event) => {
