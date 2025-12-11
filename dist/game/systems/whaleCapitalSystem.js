@@ -1,9 +1,9 @@
 import { findWhaleProfile } from "../generators/whaleGen.js";
 export const whaleCapitalModifiers = {
-    volatilitySensitivity: 1,
-    manipulationImpact: 1,
-    backfireFactor: 1,
-    leverage: 1,
+    volatilitySensitivity: 0.7,
+    manipulationImpact: 0.5,
+    backfireFactor: 1.6,
+    leverage: 0.75,
 };
 const computeSectorReturns = (state) => {
     const sectorStats = {};

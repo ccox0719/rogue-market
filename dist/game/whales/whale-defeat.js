@@ -3,6 +3,7 @@ import { findWhaleProfile } from "../generators/whaleGen.js";
 import { queueWhaleDialogue } from "../whale-dialogue.js";
 import { getActiveWhaleInstance, removeWhaleFromActiveList, } from "./whale-state.js";
 const DEFAULT_REQUIRED_RATIO = 1.2;
+const MIN_REQUIRED_RATIO = 0.9;
 export function checkWhaleBuyout(state) {
     const active = getActiveWhaleInstance(state);
     const playerCapital = Math.max(0, portfolioValue(state));
@@ -38,17 +39,23 @@ export function checkWhaleBuyout(state) {
             reason: "Their empire is already crumbling; no formal buyout needed.",
         };
     }
-    if (ratio >= DEFAULT_REQUIRED_RATIO) {
+    const progress = Number.isFinite(state.totalDays) && state.totalDays > 0
+        ? Math.min(1, state.day / state.totalDays)
+        : 0;
+    const requiredRatio = Math.max(MIN_REQUIRED_RATIO, DEFAULT_REQUIRED_RATIO - progress * 0.4);
+    if (ratio >= requiredRatio) {
         return {
             ...base,
             canAttempt: true,
             ratio,
+            requiredRatio,
             reason: "You have enough capital to challenge their position.",
         };
     }
     return {
         ...base,
         ratio,
+        requiredRatio,
         reason: "Grow a bit more before you can force a buyout.",
     };
 }

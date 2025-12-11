@@ -10,10 +10,10 @@ export interface WhaleCapitalModifiers {
 }
 
 export const whaleCapitalModifiers: WhaleCapitalModifiers = {
-  volatilitySensitivity: 1,
-  manipulationImpact: 1,
-  backfireFactor: 1,
-  leverage: 1,
+  volatilitySensitivity: 0.7,
+  manipulationImpact: 0.5,
+  backfireFactor: 1.6,
+  leverage: 0.75,
 };
 
 const computeSectorReturns = (state: GameState): Record<string, number> => {

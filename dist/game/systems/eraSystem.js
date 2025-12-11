@@ -15,17 +15,15 @@ export const advanceEraProgress = (state, rng, difficulty) => {
             state.mutationMessage = "";
             return { eraChanged: true, deckReset: false };
         }
-        if (difficulty.special?.noRunOver) {
-            const nextDeck = generateEraDeck(rng, { cycle: state.eraDeckCycle + 1 });
-            state.eras = nextDeck;
-            state.eraDeckCycle += 1;
-            state.currentEraIndex = 0;
-            state.currentEraDay = 0;
-            state.eras[0].revealed = true;
-            state.currentEraMutated = false;
-            state.mutationMessage = "";
-            return { eraChanged: true, deckReset: true };
-        }
+        const nextDeck = generateEraDeck(rng, { cycle: state.eraDeckCycle + 1 });
+        state.eras = nextDeck;
+        state.eraDeckCycle += 1;
+        state.currentEraIndex = 0;
+        state.currentEraDay = 0;
+        state.eras[0].revealed = true;
+        state.currentEraMutated = false;
+        state.mutationMessage = "";
+        return { eraChanged: true, deckReset: true };
     }
     return { eraChanged: false, deckReset: false };
 };

@@ -19,6 +19,7 @@ export interface WhaleBuyoutCheck {
 }
 
 const DEFAULT_REQUIRED_RATIO = 1.2;
+const MIN_REQUIRED_RATIO = 0.9;
 
 export function checkWhaleBuyout(state: GameState): WhaleBuyoutCheck {
   const active = getActiveWhaleInstance(state);
@@ -62,11 +63,18 @@ export function checkWhaleBuyout(state: GameState): WhaleBuyoutCheck {
     };
   }
 
-  if (ratio >= DEFAULT_REQUIRED_RATIO) {
+  const progress =
+    Number.isFinite(state.totalDays) && state.totalDays > 0
+      ? Math.min(1, state.day / state.totalDays)
+      : 0;
+  const requiredRatio = Math.max(MIN_REQUIRED_RATIO, DEFAULT_REQUIRED_RATIO - progress * 0.4);
+
+  if (ratio >= requiredRatio) {
     return {
       ...base,
       canAttempt: true,
       ratio,
+      requiredRatio,
       reason: "You have enough capital to challenge their position.",
     };
   }
@@ -74,6 +82,7 @@ export function checkWhaleBuyout(state: GameState): WhaleBuyoutCheck {
   return {
     ...base,
     ratio,
+    requiredRatio,
     reason: "Grow a bit more before you can force a buyout.",
   };
 }

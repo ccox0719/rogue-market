@@ -200,6 +200,7 @@ export const initializeUI = (
                   <div class="trade-buttons">
                     <button type="button" data-action="trade-buy" class="btn-buy">Buy</button>
                     <button type="button" data-action="trade-sell" class="btn-sell">Sell</button>
+                    <button type="button" data-action="trade-sell-all" class="btn-sell">Sell All</button>
                   </div>
                 </form>
                 <p class="feedback" data-role="trade-feedback"></p>
@@ -803,7 +804,7 @@ export const initializeUI = (
   const sideHustleCard = container.querySelector<HTMLElement>(".side-hustle-bar");
   const watchFeedback = container.querySelector<HTMLElement>("[data-role='watch-feedback']");
   const storyDialog = document.querySelector<HTMLElement>("[data-role='story-dialog']");
-  const storyLine = container.querySelector<HTMLElement>("[data-role='story-line']");
+  const storyLine = document.querySelector<HTMLElement>("[data-role='story-line']");
   const dcaOffersContainer = container.querySelector<HTMLElement>("[data-role='dca-offers']");
   const dcaActiveInfo = container.querySelector<HTMLElement>("[data-role='dca-active']");
   const communityIncomeStats = container.querySelector<HTMLElement>("[data-role='community-income-stats']");
@@ -3085,6 +3086,36 @@ export const initializeUI = (
     refreshAll();
   };
 
+  const sellAllShares = (): void => {
+    if (!tradeTicker) return;
+    const ticker = tradeTicker.value;
+    const company = getCompanyByTicker(ticker);
+    if (!company) {
+      tradeFeedback && (tradeFeedback.textContent = "Choose a valid company.");
+      return;
+    }
+    const holdings = getMaxSellQuantity(company);
+    if (holdings <= 0) {
+      tradeFeedback && (tradeFeedback.textContent = "You do not hold any shares.");
+      return;
+    }
+    runner.state.portfolio = executeTrade(
+      runner.state.portfolio,
+      ticker,
+      -holdings,
+      company.price
+    );
+    recordReactiveMicrocapTrade(runner.state, company, holdings, "sell");
+    selectedTicker = ticker;
+    if (tradeSlider) {
+      tradeSlider.value = holdings.toString();
+      updateSliderValueDisplay();
+    }
+    tradeFeedback && (tradeFeedback.textContent = `Sold all ${holdings} ${ticker} shares.`);
+    updateTradeSliderLimits();
+    refreshAll();
+  };
+
   const formatAutosave = (state: GameState) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     autosaveStatus && (autosaveStatus.textContent = `Autosaved Day ${state.day} - ${timestamp}`);
@@ -3102,6 +3133,7 @@ export const initializeUI = (
 
   container.querySelector("[data-action='trade-buy']")?.addEventListener("click", () => placeTrade("buy"));
   container.querySelector("[data-action='trade-sell']")?.addEventListener("click", () => placeTrade("sell"));
+  container.querySelector("[data-action='trade-sell-all']")?.addEventListener("click", () => sellAllShares());
   tradeSlider?.addEventListener("input", updateSliderValueDisplay);
   tradeTicker?.addEventListener("change", updateSelectionFromDropdown);
   holdingsSortSelect?.addEventListener("change", () => {
