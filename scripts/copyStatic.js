@@ -35,4 +35,28 @@ const copyDir = (name) => {
   copyRecursive(source, dest);
 };
 
+const copyPublicDir = () => {
+  const publicDir = path.join(SOURCE_DIR, "public");
+  if (!fs.existsSync(publicDir)) return;
+
+  const copyRecursive = (src, destRoot) => {
+    const dest = path.join(destRoot, path.basename(src));
+    if (fs.statSync(src).isDirectory()) {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      for (const entry of fs.readdirSync(src)) {
+        copyRecursive(path.join(src, entry), dest);
+      }
+    } else {
+      fs.copyFileSync(src, dest);
+    }
+  };
+
+  for (const entry of fs.readdirSync(publicDir)) {
+    copyRecursive(path.join(publicDir, entry), TARGET_DIR);
+  }
+};
+
 copyDir("assets");
+copyPublicDir();
